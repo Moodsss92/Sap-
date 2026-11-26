@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState, type FormEvent } from "react";
+import { ConfigError } from "@/components/ConfigError";
+import { missingPublicEnv } from "@/lib/env";
 import { getSupabase } from "@/lib/supabase/client";
 
 export default function LoginPage() {
@@ -29,6 +31,9 @@ export default function LoginPage() {
       setState("sent");
     }
   }
+
+  const missing = missingPublicEnv();
+  if (missing.length) return <ConfigError missing={missing} />;
 
   return (
     <main className="flex min-h-screen items-center justify-center px-4 py-10">

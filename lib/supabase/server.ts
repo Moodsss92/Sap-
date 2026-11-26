@@ -40,6 +40,10 @@ export function getAdminSupabase(): SupabaseClient {
 export async function requireMember(): Promise<
   { ok: true; supabase: SupabaseClient; userId: string } | { ok: false; error: string; status: number }
 > {
+  const missing = ["NEXT_PUBLIC_SUPABASE_URL", "NEXT_PUBLIC_SUPABASE_ANON_KEY", "SUPABASE_SERVICE_ROLE_KEY"].filter(
+    (k) => !process.env[k],
+  );
+  if (missing.length) return { ok: false, error: `Variables manquantes sur le serveur : ${missing.join(", ")}.`, status: 500 };
   const supabase = getServerSupabase();
   const {
     data: { user },
