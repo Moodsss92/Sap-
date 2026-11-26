@@ -168,57 +168,74 @@ export function JournalApp() {
   // ---------- Réorganisation (Whole log) ----------
   const canReorder = tab === "all" && !filters.q && !filters.statut;
 
-  /** Ordre actuel : pour chaque bloc, la liste ordonnée de ses étapes. */
-  const blockOrder = () =>
-    blocks.map((b) => ({ block: b, ids: steps.filter((st) => st.block_id === b.id).map((st) => st.id) }));
-
-  const canMove = (step: Step, dir: -1 | 1): boolean => {
-    const order = blockOrder();
-    const gi = order.findIndex((g) => g.block.id === step.block_id);
-    if (gi < 0) return false;
-    const i = order[gi].ids.indexOf(step.id);
-    const j = i + dir;
-    if (j >= 0 && j < order[gi].ids.length) return true;
-    return gi + dir >= 0 && gi + dir < order.length; // passe au bloc voisin
+  /**
+   * Ordre actuel : un groupe par bloc (dans l'ordre), puis les étapes sans bloc.
+   * Les numéros sont recalculés par groupe : 1.1, 1.2… dans un bloc, 1, 2… sans bloc.
+   */
+  type Group = { key: string; block: Block | null; ids: string[] };
+  const groupOrder = (): Group[] => {
+    const known = new Set(blocks.map((b) => b.id));
+    const groups: Group[] = blocks.map((b) => ({
+      key: b.id,
+      block: b,
+      ids: steps.filter((st) => st.block_id === b.id).map((st) => st.id),
+    }));
+    const loose = steps.filter((st) => !st.block_id || !known.has(st.block_id)).map((st) => st.id);
+    if (loose.length) groups.push({ key: "none", block: null, ids: loose });
+    return groups;
   };
 
-  /**
-   * ↑ / ↓ : échange avec l'étape voisine du même bloc. En haut (ou en bas) d'un
-   * bloc, l'étape passe à la fin du bloc précédent (ou au début du suivant).
-   * Les blocs touchés sont renumérotés 1.1, 1.2…
-   */
-  const moveStep = async (step: Step, dir: -1 | 1) => {
-    const order = blockOrder();
-    const gi = order.findIndex((g) => g.block.id === step.block_id);
-    if (gi < 0) return;
-    const ids = order[gi].ids;
-    const i = ids.indexOf(step.id);
-    const j = i + dir;
-    let target = gi;
-    if (j >= 0 && j < ids.length) {
-      [ids[i], ids[j]] = [ids[j], ids[i]];
-    } else {
-      target = gi + dir;
-      if (target < 0 || target >= order.length) return;
-      ids.splice(i, 1);
-      if (dir < 0) order[target].ids.push(step.id);
-      else order[target].ids.unshift(step.id);
-    }
-    const layout = Array.from(new Set([gi, target])).flatMap((k) =>
-      order[k].ids.map((id, idx) => ({
+  const locate = (groups: Group[], stepId: string) => {
+    const gi = groups.findIndex((g) => g.ids.includes(stepId));
+    return { gi, i: gi < 0 ? -1 : groups[gi].ids.indexOf(stepId) };
+  };
+
+  /** Place une étape à `index` dans le groupe `targetKey` (index compté avant retrait). */
+  const placeStep = async (stepId: string, targetKey: string, index: number) => {
+    const groups = groupOrder();
+    const { gi, i } = locate(groups, stepId);
+    const ti = groups.findIndex((g) => g.key === targetKey);
+    if (gi < 0 || ti < 0) return;
+    let at = Math.max(0, Math.min(index, groups[ti].ids.length));
+    if (gi === ti && i < at) at -= 1; // l'étape quitte sa place avant d'être réinsérée
+    if (gi === ti && at === i) return; // pas de changement
+    groups[gi].ids.splice(i, 1);
+    groups[ti].ids.splice(at, 0, stepId);
+
+    const layout = Array.from(new Set([gi, ti])).flatMap((k) =>
+      groups[k].ids.map((id, idx) => ({
         id,
-        block_id: order[k].block.id,
-        num: `${order[k].block.num}.${idx + 1}`,
-        bloc: blockLabel(order[k].block),
+        block_id: groups[k].block?.id ?? null,
+        num: groups[k].block ? `${groups[k].block!.num}.${idx + 1}` : String(idx + 1),
+        bloc: groups[k].block ? blockLabel(groups[k].block!) : "",
       })),
     );
     try {
       await journal.applyLayout(layout);
-      const now = layout.find((l) => l.id === step.id);
-      if (now) toast(target === gi ? `Moved to ${now.num}` : `Moved to Block ${order[target].block.num} · ${now.num}`, "success", 1800);
+      const now = layout.find((l) => l.id === stepId);
+      const where = groups[ti].block ? `Block ${groups[ti].block!.num} · ` : gi !== ti ? "Not in a block · " : "";
+      if (now) toast(`Moved to ${gi !== ti ? where : ""}${now.num}`, "success", 1800);
     } catch (e) {
       toast(e instanceof Error ? `Could not move: ${e.message}` : "Could not move.", "error", 6000);
     }
+  };
+
+  /** ↑ / ↓ : la voisine du même groupe, ou bascule dans le groupe précédent / suivant. */
+  const neighbourTarget = (stepId: string, dir: -1 | 1): { key: string; index: number } | null => {
+    const groups = groupOrder();
+    const { gi, i } = locate(groups, stepId);
+    if (gi < 0) return null;
+    const j = i + dir;
+    if (j >= 0 && j < groups[gi].ids.length) return { key: groups[gi].key, index: dir < 0 ? j : j + 1 };
+    const ng = gi + dir;
+    if (ng < 0 || ng >= groups.length) return null;
+    return { key: groups[ng].key, index: dir < 0 ? groups[ng].ids.length : 0 };
+  };
+
+  const canMove = (step: Step, dir: -1 | 1) => neighbourTarget(step.id, dir) !== null;
+  const moveStep = async (step: Step, dir: -1 | 1) => {
+    const t = neighbourTarget(step.id, dir);
+    if (t) await placeStep(step.id, t.key, t.index);
   };
 
   const removeBlock = async (b: Block) => {
@@ -626,6 +643,7 @@ export function JournalApp() {
               onToggle: () => setReorder((r) => !r),
               canMove,
               onMove: moveStep,
+              onDrop: placeStep,
             }}
             capturesByStep={capturesByStep}
             filters={filters}
