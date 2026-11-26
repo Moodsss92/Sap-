@@ -48,3 +48,14 @@ export function nextGlobalNum(steps: Pick<Step, "num">[]): string {
   }
   return String(max + 1);
 }
+
+/** Numéro suivant dans un bloc : 1.1, 1.2… pour le bloc 1. */
+export function nextNumInBlock(steps: Pick<Step, "num" | "block_id" | "id">[], blockId: string, blockNum: number, excludeId?: string): string {
+  let max = 0;
+  for (const s of steps) {
+    if (s.block_id !== blockId || s.id === excludeId) continue;
+    const m = s.num.trim().match(/^\d+\.(\d+)$/);
+    if (m) max = Math.max(max, Number(m[1]));
+  }
+  return `${blockNum}.${max + 1}`;
+}

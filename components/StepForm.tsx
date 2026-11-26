@@ -12,11 +12,7 @@ import {
 } from "react";
 import { removeFiles, uploadCaptures } from "@/lib/storage";
 import { lookupTcode, normalizeTcode } from "@/lib/tcodes";
-import {
-  type DraftCapture,
-  type Step,
-  type StepFields,
-} from "@/lib/types";
+import { type Block, type DraftCapture, type StepFields } from "@/lib/types";
 import { AddCapturesZone } from "./AddCapturesZone";
 import { CaptureImage } from "./CaptureImage";
 import { Icon } from "./ui/Badges";
@@ -64,11 +60,14 @@ export const StepForm = forwardRef<
   StepFormHandle,
   {
     init: FormInit;
+    blocks: Block[];
+    /** Ouvre la création d'un bloc ; renvoie le bloc créé (ou null si annulé). */
+    onNewBlock: () => Promise<Block | null>;
     onSave: (id: string, fields: StepFields, drafts: DraftCapture[], isNew: boolean) => Promise<void>;
     onCancel: () => void;
     onDirtyChange: (dirty: boolean) => void;
   }
->(function StepForm({ init, onSave, onCancel, onDirtyChange }, ref) {
+>(function StepForm({ init, blocks, onNewBlock, onSave, onCancel, onDirtyChange }, ref) {
   const toast = useToast();
   const [fields, setFields] = useState<StepFields>(init.fields);
   const [drafts, setDrafts] = useState<DraftCapture[]>(init.drafts);
@@ -170,6 +169,11 @@ export const StepForm = forwardRef<
   // ---------- Enregistrement ----------
   const save = useCallback(async () => {
     if (saving || upload) return;
+    if (!fieldsRef.current.block_id) {
+      toast(blocks.length ? "Choose the block this step belongs to." : "Create a block first: Block › + New block…", "error", 5000);
+      document.getElementById("f-block")?.focus();
+      return;
+    }
     setSaving(true);
     try {
       const f = fieldsRef.current;
@@ -193,7 +197,7 @@ export const StepForm = forwardRef<
     } finally {
       setSaving(false);
     }
-  }, [init.id, init.isNew, onSave, saving, toast, upload]);
+  }, [blocks.length, init.id, init.isNew, onSave, saving, toast, upload]);
 
   // Raccourcis : Ctrl/Cmd+S, Échap
   useEffect(() => {
@@ -231,8 +235,34 @@ export const StepForm = forwardRef<
         </button>
       </div>
 
-      {/* Les 4 champs à remplir */}
+      {/* Bloc + les 4 champs à remplir */}
       <div className="card inset-list mb-4 overflow-hidden">
+        <Field label="Block" htmlFor="f-block">
+          <select
+            id="f-block"
+            className="ios-input"
+            value={fields.block_id ?? ""}
+            onChange={async (e) => {
+              const v = e.target.value;
+              if (v === "__new") {
+                const b = await onNewBlock();
+                if (b) set("block_id", b.id);
+                return;
+              }
+              set("block_id", v || null);
+            }}
+          >
+            <option value="" disabled={!!fields.block_id}>
+              {blocks.length ? "Choose a block…" : "No block yet"}
+            </option>
+            {blocks.map((b) => (
+              <option key={b.id} value={b.id}>
+                Block {b.num} · {b.name}
+              </option>
+            ))}
+            <option value="__new">+ New block…</option>
+          </select>
+        </Field>
         <Field label="Title" htmlFor="f-titre" hint={<SuggestHint show={suggested.has("titre")} />}>
           <input
             id="f-titre"

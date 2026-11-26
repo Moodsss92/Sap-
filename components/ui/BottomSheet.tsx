@@ -22,12 +22,17 @@ export function BottomSheet({
     if (!open) return;
     const prev = document.activeElement as HTMLElement | null;
     ref.current?.querySelector<HTMLElement>("button, [href], input")?.focus();
+    // Phase de capture + stopPropagation : Échap ferme la feuille sans fermer
+    // aussi ce qui est derrière (formulaire, fiche).
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && dismissible) onClose?.();
+      if (e.key !== "Escape") return;
+      e.stopPropagation();
+      e.preventDefault();
+      if (dismissible) onClose?.();
     };
-    window.addEventListener("keydown", onKey);
+    window.addEventListener("keydown", onKey, true);
     return () => {
-      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("keydown", onKey, true);
       prev?.focus?.();
     };
   }, [open, dismissible, onClose]);

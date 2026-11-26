@@ -2,7 +2,9 @@
 
 Web app partagée par l'équipe (Moad, Armel, Mazen, Thomas) pour documenter chaque étape de la configuration S/4HANA MM/SD du business case **Philo Televisions** : company codes C2NL / C2BE (copiées de 1010), plants Breda, Delft, Brussels, Antwerp, purchasing orgs P2HQ / P2BR / P2BX / P2AN, sales orgs S2NL / S2BE.
 
-L'interface est en **anglais**. Chaque étape tient en **4 champs** : titre, T-code, chemin (SPRO) et « What I did », plus les captures d'écran. Le T-code pré-remplit le titre et le chemin (dictionnaire local). L'étape est attribuée automatiquement à la personne qui la crée et numérotée 1, 2, 3… (plus de responsable ni de bloc à saisir).
+L'interface est en **anglais**. Chaque étape tient en **4 champs** : titre, T-code, chemin (SPRO) et « What I did », plus les captures d'écran. Le T-code pré-remplit le titre et le chemin (dictionnaire local). L'étape est attribuée automatiquement à la personne qui la crée.
+
+**Blocs** : l'équipe crée ses blocs (« + New block »), chacun avec un nom. Ils sont numérotés automatiquement dans l'ordre de création (Block 1, Block 2…). Chaque étape est rattachée à un bloc et numérotée dedans (1.1, 1.2…, puis 2.1…). La liste, les exports Word / ZIP / texte et la documentation finale suivent l'ordre des blocs. Un bloc se renomme à tout moment ; il ne se supprime que s'il est vide.
 
 ## Fonctionnalités
 
@@ -47,6 +49,7 @@ L'interface est en **anglais**. Chaque étape tient en **4 champs** : titre, T-c
 ├── middleware.ts                    Rafraîchit la session et protège les pages
 └── supabase/
     ├── migrations/0001_init.sql     Tables, RLS, bucket « captures », Realtime
+    ├── migrations/0002_blocks.sql   Blocs créés par l'équipe (numérotation automatique)
     └── seed.sql                     Étapes 1.1 à 1.7 (facultatif)
 ```
 
@@ -61,7 +64,7 @@ npm i
 ### 2. Projet Supabase
 
 1. Crée un projet sur [supabase.com](https://supabase.com).
-2. Dans **SQL Editor**, exécute `supabase/migrations/0001_init.sql`. Ce script crée :
+2. Dans **SQL Editor**, exécute `supabase/migrations/0001_init.sql` puis `0002_blocks.sql`. Ce script crée :
    - les tables `members`, `steps` et `captures` ;
    - les policies RLS : tout membre connecté peut tout lire et tout modifier ;
    - le bucket **privé** `captures` et ses policies ;

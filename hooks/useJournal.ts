@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { getSupabase } from "@/lib/supabase/client";
 import { removeFiles } from "@/lib/storage";
 import { compareSteps } from "@/lib/numbering";
-import type { Capture, DraftCapture, Step, StepFields } from "@/lib/types";
+import { blockLabel, type Block, type Capture, type DraftCapture, type Step, type StepFields } from "@/lib/types";
 
 function upsert<T extends { id: string }>(list: T[], row: T): T[] {
   const i = list.findIndex((x) => x.id === row.id);
@@ -18,19 +18,22 @@ function upsert<T extends { id: string }>(list: T[], row: T): T[] {
 export function useJournal(enabled: boolean) {
   const [steps, setSteps] = useState<Step[]>([]);
   const [captures, setCaptures] = useState<Capture[]>([]);
+  const [blocks, setBlocks] = useState<Block[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [live, setLive] = useState(false);
 
   const reload = useCallback(async () => {
     const supabase = getSupabase();
-    const [s, c] = await Promise.all([
+    const [s, c, b] = await Promise.all([
       supabase.from("steps").select("*"),
       supabase.from("captures").select("*").order("position"),
+      supabase.from("blocks").select("*").order("num"),
     ]);
-    if (s.error || c.error) setError((s.error ?? c.error)!.message);
+    if (s.error || c.error || b.error) setError((s.error ?? c.error ?? b.error)!.message);
     else setError(null);
     setSteps((s.data as Step[]) ?? []);
+    setBlocks((b.data as Block[]) ?? []);
     setCaptures((c.data as Capture[]) ?? []);
     setLoading(false);
   }, []);
@@ -59,6 +62,14 @@ export function useJournal(enabled: boolean) {
           setCaptures((prev) => upsert(prev, p.new as Capture));
         }
       })
+      .on("postgres_changes", { event: "*", schema: "public", table: "blocks" }, (p) => {
+        if (p.eventType === "DELETE") {
+          const id = (p.old as Partial<Block>).id;
+          setBlocks((prev) => prev.filter((b) => b.id !== id));
+        } else {
+          setBlocks((prev) => upsert(prev, p.new as Block));
+        }
+      })
       .subscribe((status) => {
         setLive(status === "SUBSCRIBED");
         // Après une reconnexion, on resynchronise pour ne rien rater.
@@ -70,7 +81,19 @@ export function useJournal(enabled: boolean) {
     };
   }, [enabled, reload]);
 
-  const sortedSteps = useMemo(() => steps.slice().sort(compareSteps), [steps]);
+  const sortedBlocks = useMemo(() => blocks.slice().sort((a, b) => a.num - b.num), [blocks]);
+
+  // Le libellé du bloc (« 1 · nom ») est recalculé à partir du bloc : un renommage
+  // se voit partout, et le tri / les exports regroupent les étapes par bloc.
+  const sortedSteps = useMemo(() => {
+    const byId = new Map(blocks.map((b) => [b.id, b]));
+    return steps
+      .map((s) => {
+        const b = s.block_id ? byId.get(s.block_id) : undefined;
+        return { ...s, bloc: b ? blockLabel(b) : "" };
+      })
+      .sort(compareSteps);
+  }, [steps, blocks]);
 
   const capturesByStep = useMemo(() => {
     const map = new Map<string, Capture[]>();
@@ -171,8 +194,35 @@ export function useJournal(enabled: boolean) {
     [captures],
   );
 
+  // ---------- Blocs ----------
+
+  const createBlock = useCallback(async (name: string): Promise<Block> => {
+    const { data, error } = await getSupabase().from("blocks").insert({ name: name.trim() }).select().single();
+    if (error) throw new Error(error.message);
+    const block = data as Block;
+    setBlocks((prev) => upsert(prev, block));
+    return block;
+  }, []);
+
+  const renameBlock = useCallback(async (id: string, name: string) => {
+    const { data, error } = await getSupabase().from("blocks").update({ name: name.trim() }).eq("id", id).select().single();
+    if (error) throw new Error(error.message);
+    setBlocks((prev) => upsert(prev, data as Block));
+  }, []);
+
+  /** Supprime un bloc vide (la base refuse si des étapes y sont encore rattachées). */
+  const deleteBlock = useCallback(async (id: string) => {
+    const { error } = await getSupabase().from("blocks").delete().eq("id", id);
+    if (error) throw new Error(error.code === "23503" ? "This block still has steps. Move or delete them first." : error.message);
+    setBlocks((prev) => prev.filter((b) => b.id !== id));
+  }, []);
+
   return {
     steps: sortedSteps,
+    blocks: sortedBlocks,
+    createBlock,
+    renameBlock,
+    deleteBlock,
     captures,
     capturesByStep,
     loading,

@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { NO_BLOC } from "@/lib/blocs";
-import { STATUTS, STATUT_LABEL, type Capture, type Statut, type Step } from "@/lib/types";
+import { STATUTS, STATUT_LABEL, type Block, type Capture, type Statut, type Step } from "@/lib/types";
 import { Icon, StatutBadge, TcodeBadge } from "./ui/Badges";
 
 export interface ListFilters {
@@ -12,6 +12,11 @@ export interface ListFilters {
 
 export function StepList({
   steps,
+  blocks,
+  onNewBlock,
+  onAddToBlock,
+  onRenameBlock,
+  onDeleteBlock,
   capturesByStep,
   filters,
   onFilters,
@@ -20,6 +25,11 @@ export function StepList({
   loading,
 }: {
   steps: Step[];
+  blocks: Block[];
+  onNewBlock: () => void;
+  onAddToBlock: (block: Block) => void;
+  onRenameBlock: (block: Block) => void;
+  onDeleteBlock: (block: Block) => void;
   capturesByStep: Map<string, Capture[]>;
   filters: ListFilters;
   onFilters: (f: ListFilters) => void;
@@ -29,17 +39,21 @@ export function StepList({
 }) {
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
 
-  const groups = useMemo(() => {
-    const out: { bloc: string; steps: Step[] }[] = [];
-    for (const s of steps) {
-      const bloc = s.bloc || NO_BLOC;
-      const last = out[out.length - 1];
-      if (last && last.bloc === bloc) last.steps.push(s);
-      else out.push({ bloc, steps: [s] });
-    }
-    return out;
-  }, [steps]);
+  const hasFilters = !!(filters.q || filters.statut);
 
+  // Un groupe par bloc, dans l'ordre (y compris les blocs vides), puis les étapes sans bloc
+  const groups = useMemo(() => {
+    const ids = new Set(blocks.map((b) => b.id));
+    const out: { key: string; label: string; block: Block | null; steps: Step[] }[] = blocks.map((b) => ({
+      key: b.id,
+      label: `Block ${b.num} · ${b.name}`,
+      block: b,
+      steps: steps.filter((st) => st.block_id === b.id),
+    }));
+    const loose = steps.filter((st) => !st.block_id || !ids.has(st.block_id));
+    if (loose.length) out.push({ key: "none", label: NO_BLOC, block: null, steps: loose });
+    return hasFilters ? out.filter((g) => g.steps.length) : out;
+  }, [steps, blocks, hasFilters]);
 
   const toggle = (bloc: string) =>
     setCollapsed((prev) => {
@@ -48,8 +62,6 @@ export function StepList({
       else next.add(bloc);
       return next;
     });
-
-  const hasFilters = !!(filters.q || filters.statut);
 
   return (
     <div>
@@ -97,37 +109,67 @@ export function StepList({
         </div>
       ) : groups.length === 0 ? (
         <div className="card px-4 py-8 text-center">
-          <p className="text-[17px] font-semibold">{hasFilters ? "No results" : "No steps yet"}</p>
+          <p className="text-[17px] font-semibold">{hasFilters ? "No results" : "No blocks yet"}</p>
           <p className="mt-1 text-[14px] text-label3">
-            {hasFilters ? "Change the search or filters." : "Drop an SAP screenshot to create the first one."}
+            {hasFilters ? "Change the search or filters." : "Create Block 1 and give it a name, then add your screenshots to it."}
           </p>
-          {hasFilters && (
+          {hasFilters ? (
             <button type="button" className="btn-plain mt-2" onClick={() => onFilters({ q: "", statut: "" })}>
               Clear filters
+            </button>
+          ) : (
+            <button type="button" className="btn-blue mt-4" onClick={onNewBlock}>
+              <Icon name="plus" className="h-[18px] w-[18px]" /> Create Block 1
             </button>
           )}
         </div>
       ) : (
         <div className="space-y-5">
           {groups.map((g) => {
-            const done = g.steps.filter((s) => s.statut === "fait").length;
-            const open = !collapsed.has(g.bloc);
-            const pct = (done / g.steps.length) * 100;
+            const done = g.steps.filter((st) => st.statut === "fait").length;
+            const open = !collapsed.has(g.key);
+            const pct = g.steps.length ? (done / g.steps.length) * 100 : 0;
             return (
-              <section key={g.bloc} aria-label={g.bloc}>
-                <button
-                  type="button"
-                  aria-expanded={open}
-                  onClick={() => toggle(g.bloc)}
-                  className="flex min-h-[44px] w-full items-center gap-2 px-1 text-left"
-                >
-                  <Icon name="chevron-down" className={`h-4 w-4 shrink-0 text-label3 transition-transform ${open ? "" : "-rotate-90"}`} />
-                  <span className="min-w-0 flex-1 truncate text-[15px] font-semibold">{g.bloc}</span>
-                  <span className="shrink-0 text-[13px] tabular-nums text-label3">
-                    {done}/{g.steps.length} done
-                  </span>
-                </button>
-                <div className="mx-1 mb-2 h-1 overflow-hidden rounded-full bg-fill/20" role="progressbar" aria-valuemin={0} aria-valuemax={g.steps.length} aria-valuenow={done} aria-label={`Progress ${g.bloc}`}>
+              <section key={g.key} aria-label={g.label}>
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    aria-expanded={open}
+                    onClick={() => toggle(g.key)}
+                    className="flex min-h-[44px] min-w-0 flex-1 items-center gap-2 px-1 text-left"
+                  >
+                    <Icon name="chevron-down" className={`h-4 w-4 shrink-0 text-label3 transition-transform ${open ? "" : "-rotate-90"}`} />
+                    <span className="min-w-0 flex-1 truncate text-[15px] font-semibold">{g.label}</span>
+                    <span className="shrink-0 text-[13px] tabular-nums text-label3">
+                      {done}/{g.steps.length} done
+                    </span>
+                  </button>
+                  {g.block && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => onRenameBlock(g.block!)}
+                        aria-label={`Rename ${g.label}`}
+                        title="Rename"
+                        className="flex h-11 w-9 shrink-0 items-center justify-center text-label3 hover:text-blue"
+                      >
+                        <Icon name="edit" className="h-4 w-4" />
+                      </button>
+                      {g.steps.length === 0 && (
+                        <button
+                          type="button"
+                          onClick={() => onDeleteBlock(g.block!)}
+                          aria-label={`Delete ${g.label}`}
+                          title="Delete empty block"
+                          className="flex h-11 w-9 shrink-0 items-center justify-center text-label3 hover:text-red"
+                        >
+                          <Icon name="trash" className="h-4 w-4" />
+                        </button>
+                      )}
+                    </>
+                  )}
+                </div>
+                <div className="mx-1 mb-2 h-1 overflow-hidden rounded-full bg-fill/20" role="progressbar" aria-valuemin={0} aria-valuemax={g.steps.length} aria-valuenow={done} aria-label={`Progress ${g.label}`}>
                   <div className="h-full rounded-full bg-green transition-all" style={{ width: `${pct}%` }} />
                 </div>
                 {open && (
@@ -164,11 +206,28 @@ export function StepList({
                         </li>
                       );
                     })}
+                    {g.block && (
+                      <li>
+                        <button
+                          type="button"
+                          onClick={() => onAddToBlock(g.block!)}
+                          className="flex min-h-[48px] w-full items-center gap-2 px-4 text-left text-[15px] text-blue active:bg-fill/15"
+                        >
+                          <Icon name="plus" className="h-4 w-4" />
+                          {g.steps.length ? `Add a step to Block ${g.block.num}` : `Add the first step to Block ${g.block.num}`}
+                        </button>
+                      </li>
+                    )}
                   </ul>
                 )}
               </section>
             );
           })}
+          {!hasFilters && (
+            <button type="button" onClick={onNewBlock} className="btn-tinted w-full">
+              <Icon name="plus" className="h-[18px] w-[18px]" /> New block (Block {(blocks[blocks.length - 1]?.num ?? 0) + 1})
+            </button>
+          )}
         </div>
       )}
     </div>

@@ -17,8 +17,22 @@ export interface Member {
   created_at: string;
 }
 
+/** Bloc créé par l'équipe : « Block 1 · nom ». */
+export interface Block {
+  id: string;
+  num: number;
+  name: string;
+  created_by: string | null;
+  created_at: string;
+}
+
+export function blockLabel(b: Pick<Block, "num" | "name">): string {
+  return `${b.num} · ${b.name}`;
+}
+
 export interface Step {
   id: string;
+  block_id: string | null;
   num: string;
   bloc: string;
   titre: string;
@@ -39,7 +53,7 @@ export interface Step {
 /** Champs éditables d'une étape (formulaire). */
 export type StepFields = Pick<
   Step,
-  "num" | "bloc" | "titre" | "tcode" | "chemin" | "action" | "valeurs" | "controle" | "remarque" | "resp" | "statut"
+  "block_id" | "num" | "bloc" | "titre" | "tcode" | "chemin" | "action" | "valeurs" | "controle" | "remarque" | "resp" | "statut"
 >;
 
 export interface Capture {
@@ -71,6 +85,7 @@ export interface AnalyzeResult {
 }
 
 export const EMPTY_FIELDS: StepFields = {
+  block_id: null,
   num: "",
   bloc: "",
   titre: "",

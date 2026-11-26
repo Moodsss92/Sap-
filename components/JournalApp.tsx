@@ -7,9 +7,9 @@ import { useSession } from "@/hooks/useSession";
 import { usePrefetchSigned } from "@/hooks/useSignedUrl";
 import { copyToClipboard, journalToText, stepToText } from "@/lib/exportText";
 import { imagesFromDataTransfer } from "@/lib/images";
-import { nextGlobalNum } from "@/lib/numbering";
+import { nextGlobalNum, nextNumInBlock } from "@/lib/numbering";
 import { copyFiles, uploadCaptures } from "@/lib/storage";
-import { EMPTY_FIELDS, STATUT_LABEL, type DraftCapture, type MemberName, type Statut, type Step, type StepFields } from "@/lib/types";
+import { EMPTY_FIELDS, STATUT_LABEL, blockLabel, type Block, type DraftCapture, type MemberName, type Statut, type Step, type StepFields } from "@/lib/types";
 import { ExportSheet, type ExportKind } from "./ExportSheet";
 import { HelpBanner } from "./HelpBanner";
 import { NewFromCaptureButton } from "./NewFromCaptureButton";
@@ -18,6 +18,7 @@ import { StepDetail } from "./StepDetail";
 import { StepForm, type FormInit, type StepFormHandle } from "./StepForm";
 import { StepList, type ListFilters } from "./StepList";
 import { WhoAreYouSheet } from "./WhoAreYouSheet";
+import { BlockNameSheet } from "./BlockNameSheet";
 import { Alert, type AlertOptions } from "./ui/Alert";
 import { Icon } from "./ui/Badges";
 import { useToast } from "./ui/Toast";
@@ -37,8 +38,8 @@ function matchesQuery(s: Step, q: string): boolean {
 }
 
 function stepFields(s: Step): StepFields {
-  const { num, bloc, titre, tcode, chemin, action, valeurs, controle, remarque, resp, statut } = s;
-  return { num, bloc, titre, tcode, chemin, action, valeurs, controle, remarque, resp, statut };
+  const { block_id, num, bloc, titre, tcode, chemin, action, valeurs, controle, remarque, resp, statut } = s;
+  return { block_id, num, bloc, titre, tcode, chemin, action, valeurs, controle, remarque, resp, statut };
 }
 
 export function JournalApp() {
@@ -57,6 +58,11 @@ export function JournalApp() {
   const [formKey, setFormKey] = useState(0);
   const [dirty, setDirty] = useState(false);
   const formRef = useRef<StepFormHandle>(null);
+  // Bloc sur lequel on travaille : présélectionné pour les nouvelles étapes
+  const [activeBlockId, setActiveBlockId] = useState<string | null>(null);
+  const [blockSheet, setBlockSheet] = useState<
+    { mode: "create"; resolve?: (b: Block | null) => void } | { mode: "rename"; block: Block } | null
+  >(null);
   const [newUpload, setNewUpload] = useState<Progress>(null);
   const [detailUpload, setDetailUpload] = useState<Progress>(null);
   const [whoOpen, setWhoOpen] = useState(false);
@@ -136,9 +142,42 @@ export function JournalApp() {
     async (id: string | null) => {
       if (!(await leaveForm())) return;
       setSelectedId(id);
+      const blockId = steps.find((st) => st.id === id)?.block_id;
+      if (blockId) setActiveBlockId(blockId);
     },
-    [leaveForm],
+    [leaveForm, steps],
   );
+
+  // ---------- Blocs ----------
+  const blocks = journal.blocks;
+  /** Bloc par défaut d'une nouvelle étape : le bloc actif, sinon le dernier créé. */
+  const defaultBlockId = useCallback(
+    (): string | null =>
+      (activeBlockId && blocks.some((b) => b.id === activeBlockId) ? activeBlockId : blocks[blocks.length - 1]?.id) ?? null,
+    [activeBlockId, blocks],
+  );
+
+  /** Ouvre la feuille « New block » ; renvoie le bloc créé, ou null si annulé. */
+  const askNewBlock = useCallback(
+    () => new Promise<Block | null>((resolve) => setBlockSheet({ mode: "create", resolve })),
+    [],
+  );
+
+  const removeBlock = async (b: Block) => {
+    const ok = await confirm({
+      title: `Delete Block ${b.num} · ${b.name}?`,
+      message: "This empty block will be removed for the whole team.",
+      confirmLabel: "Delete",
+      destructive: true,
+    });
+    if (!ok) return;
+    try {
+      await journal.deleteBlock(b.id);
+      toast(`Block ${b.num} deleted`);
+    } catch (e) {
+      toast(e instanceof Error ? e.message : "Could not delete.", "error", 6000);
+    }
+  };
 
   const openForm = useCallback((init: FormInit) => {
     setForm(init);
@@ -158,7 +197,7 @@ export function JournalApp() {
         openForm({
           id,
           isNew: true,
-          fields: { ...EMPTY_FIELDS, resp: me?.name ?? "", statut: "encours" },
+          fields: { ...EMPTY_FIELDS, block_id: defaultBlockId(), resp: me?.name ?? "", statut: "encours" },
           drafts: paths.map((path) => ({ key: path, path, legende: "" })),
           uploaded: paths,
         });
@@ -168,7 +207,7 @@ export function JournalApp() {
         setNewUpload(null);
       }
     },
-    [newUpload, leaveForm, me, openForm, toast],
+    [newUpload, leaveForm, me, openForm, toast, defaultBlockId],
   );
 
   const addToSelected = useCallback(
@@ -230,15 +269,23 @@ export function JournalApp() {
   // ---------- Actions de la fiche ----------
   const onSave = useCallback(
     async (id: string, fields: StepFields, drafts: DraftCapture[], isNew: boolean) => {
-      // Numéro attribué à l'enregistrement (1, 2, 3…) pour limiter les doublons entre collègues
-      const toSave = isNew && !fields.num ? { ...fields, num: nextGlobalNum(steps) } : fields;
+      // Numéro attribué à l'enregistrement : 1.1, 1.2… dans le bloc 1 (ou 1, 2, 3… sans bloc).
+      // On renumérote aussi quand l'étape change de bloc.
+      const block = blocks.find((b) => b.id === fields.block_id);
+      const before = steps.find((st) => st.id === id);
+      const moved = !isNew && before?.block_id !== fields.block_id;
+      let num = fields.num;
+      if (block && (isNew || moved || !num)) num = nextNumInBlock(steps, block.id, block.num, id);
+      else if (!block && (isNew || moved) && !num) num = nextGlobalNum(steps);
+      const toSave = { ...fields, num, bloc: block ? blockLabel(block) : "" };
       await journal.saveStep(id, toSave, drafts, isNew);
+      if (block) setActiveBlockId(block.id);
       setForm(null);
       setDirty(false);
       setSelectedId(id);
       toast(isNew ? "Step created" : "Changes saved", "success");
     },
-    [journal, steps, toast],
+    [journal, steps, blocks, toast],
   );
 
   const cancelForm = useCallback(() => {
@@ -273,13 +320,16 @@ export function JournalApp() {
     });
   };
 
-  const newStep = () =>
+  const newStep = async (blockId: string | null = defaultBlockId()) => {
+    if (!(await leaveForm())) return;
+    if (blockId) setActiveBlockId(blockId);
     openForm({
       id: crypto.randomUUID(),
       isNew: true,
-      fields: { ...EMPTY_FIELDS, resp: me?.name ?? "", statut: "afaire" },
+      fields: { ...EMPTY_FIELDS, block_id: blockId, resp: me?.name ?? "", statut: "afaire" },
       drafts: [],
     });
+  };
 
   const remove = async (s: Step) => {
     const ok = await confirm({
@@ -506,6 +556,11 @@ export function JournalApp() {
           )}
           <StepList
             steps={visible}
+            blocks={blocks}
+            onNewBlock={() => setBlockSheet({ mode: "create" })}
+            onAddToBlock={(b) => newStep(b.id)}
+            onRenameBlock={(b) => setBlockSheet({ mode: "rename", block: b })}
+            onDeleteBlock={removeBlock}
             capturesByStep={capturesByStep}
             filters={filters}
             onFilters={setFilters}
@@ -521,6 +576,8 @@ export function JournalApp() {
               key={formKey}
               ref={formRef}
               init={form}
+              blocks={blocks}
+              onNewBlock={askNewBlock}
               onSave={onSave}
               onCancel={cancelForm}
               onDirtyChange={setDirty}
@@ -546,7 +603,7 @@ export function JournalApp() {
                 }
               }}
               onDelete={() => remove(selected)}
-              onNewStep={newStep}
+              onNewStep={() => newStep(selected.block_id)}
               onAddFiles={addToSelected}
               uploadProgress={detailUpload}
               authorName={nameOf(selected.author_id)}
@@ -584,6 +641,28 @@ export function JournalApp() {
         teamCaptures={journal.captures.length}
         viewCount={visible.length}
         scopeLabel={scopeLabel}
+      />
+      <BlockNameSheet
+        open={!!blockSheet}
+        mode={blockSheet?.mode ?? "create"}
+        nextNum={(blocks[blocks.length - 1]?.num ?? 0) + 1}
+        initialName={blockSheet?.mode === "rename" ? blockSheet.block.name : ""}
+        onClose={() => {
+          if (blockSheet?.mode === "create") blockSheet.resolve?.(null);
+          setBlockSheet(null);
+        }}
+        onSubmit={async (name) => {
+          if (blockSheet?.mode === "rename") {
+            await journal.renameBlock(blockSheet.block.id, name);
+            toast("Block renamed", "success");
+          } else {
+            const b = await journal.createBlock(name);
+            setActiveBlockId(b.id);
+            toast(`Block ${b.num} · ${b.name} created`, "success");
+            if (blockSheet?.mode === "create") blockSheet.resolve?.(b);
+          }
+          setBlockSheet(null);
+        }}
       />
       <Alert options={alert} onCancel={() => closeAlert(false)} onConfirm={() => closeAlert(true)} />
     </div>

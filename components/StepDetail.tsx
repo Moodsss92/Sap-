@@ -104,6 +104,7 @@ export function StepDetail({
 
       {/* Les 4 champs de la fiche, façon Réglages */}
       <dl className="card inset-list mb-5 overflow-hidden">
+        <Row label="Block">{step.bloc ? `Block ${step.bloc}` : <span className="text-label3">Not in a block (edit to choose one)</span>}</Row>
         <Row label="T-code">{step.tcode ? <span className="font-mono font-semibold">{step.tcode}</span> : "—"}</Row>
         <Row label="Path">
           {step.chemin ? <span className="font-mono text-[14px] text-blue">{step.chemin}</span> : "—"}
