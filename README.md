@@ -1,16 +1,16 @@
-# Journal de configuration SAP · Philo Televisions
+# SAP Log · Philo Televisions
 
 Web app partagée par l'équipe (Moad, Armel, Mazen, Thomas) pour documenter chaque étape de la configuration S/4HANA MM/SD du business case **Philo Televisions** : company codes C2NL / C2BE (copiées de 1010), plants Breda, Delft, Brussels, Antwerp, purchasing orgs P2HQ / P2BR / P2BX / P2AN, sales orgs S2NL / S2BE.
 
-Pour chaque étape : transaction, chemin SPRO, ce qu'on a fait, valeurs saisies, contrôle, problème / solution et captures d'écran. Claude lit les captures et pré-remplit la fiche.
+L'interface est en **anglais**. Chaque étape tient en **4 champs** : titre, T-code, chemin (SPRO) et « What I did », plus les captures d'écran. Claude lit les captures et pré-remplit ces champs. L'étape est attribuée automatiquement à la personne qui la crée et numérotée 1, 2, 3… (plus de responsable ni de bloc à saisir).
 
 ## Fonctionnalités
 
 - **Accès direct, sans e-mail ni mot de passe** : on ouvre le site et on choisit son nom (« Qui es-tu ? »). Chaque navigateur reçoit une session anonyme Supabase, gardée ensuite ; le nom se change avec « Changer ».
 - **Un espace par personne** + « Tout le journal », dans un segmented control collé en haut.
-- Liste groupée par bloc, avec la progression « x/y faites », la recherche plein texte et des filtres par bloc et par statut.
+- Liste des étapes avec la progression « x/y done », la recherche plein texte et un filtre par statut.
 - **+ Nouvelle étape depuis une capture** : glisser-déposer de plusieurs images, sélection de fichiers ou Ctrl/⌘ + V. Claude remplit ensuite les champs vides.
-- Auto-complétion du chemin et du titre à partir du T-code (`lib/tcodes.ts`), numérotation automatique dans le bloc.
+- Auto-complétion du chemin et du titre à partir du T-code (`lib/tcodes.ts`), numérotation automatique.
 - Fiche détaillée façon Réglages iOS : statut en un clic, lightbox, ajout de captures sans passer par « Modifier », Dupliquer, Copier, Supprimer.
 - **Exports** (bouton « Exporter ») :
   - **Documentation finale (Word)** : le travail de chacun regroupé en un seul document cohérent. Claude relit tout le journal et rédige uniquement le texte de liaison : une synthèse, une introduction par bloc (ce qu'on configure, pourquoi, lien avec les autres blocs) et une liste de points à vérifier (incohérences entre fiches, contrôles manquants). Les fiches sont reproduites telles quelles. Le document contient une page de titre, un sommaire, la structure organisationnelle, un chapitre par bloc et des annexes (problèmes rencontrés et solutions, points à vérifier, avancement et contributions). Option « Seulement les étapes faites ». Si Claude est indisponible, l'export se fait quand même, sans le texte de liaison.

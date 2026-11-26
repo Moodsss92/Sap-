@@ -1,19 +1,17 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { BLOCS, NO_BLOC } from "@/lib/blocs";
+import { NO_BLOC } from "@/lib/blocs";
 import { STATUTS, STATUT_LABEL, type Capture, type Statut, type Step } from "@/lib/types";
 import { Icon, StatutBadge, TcodeBadge } from "./ui/Badges";
 
 export interface ListFilters {
   q: string;
-  bloc: string;
   statut: Statut | "";
 }
 
 export function StepList({
   steps,
-  allBlocs,
   capturesByStep,
   filters,
   onFilters,
@@ -22,7 +20,6 @@ export function StepList({
   loading,
 }: {
   steps: Step[];
-  allBlocs: string[];
   capturesByStep: Map<string, Capture[]>;
   filters: ListFilters;
   onFilters: (f: ListFilters) => void;
@@ -43,10 +40,6 @@ export function StepList({
     return out;
   }, [steps]);
 
-  const blocOptions = useMemo(() => {
-    const set = new Set<string>([...BLOCS, ...allBlocs.filter(Boolean)]);
-    return Array.from(set);
-  }, [allBlocs]);
 
   const toggle = (bloc: string) =>
     setCollapsed((prev) => {
@@ -56,7 +49,7 @@ export function StepList({
       return next;
     });
 
-  const hasFilters = !!(filters.q || filters.bloc || filters.statut);
+  const hasFilters = !!(filters.q || filters.statut);
 
   return (
     <div>
@@ -77,22 +70,6 @@ export function StepList({
           />
         </div>
         <div className="flex gap-2">
-          <label className="sr-only" htmlFor="filter-bloc">
-            Filter by block
-          </label>
-          <select
-            id="filter-bloc"
-            value={filters.bloc}
-            onChange={(e) => onFilters({ ...filters, bloc: e.target.value })}
-            className="min-h-[40px] min-w-0 flex-1 rounded-[10px] bg-card px-2.5 text-[15px] text-label outline-none focus:ring-2 focus:ring-blue/50"
-          >
-            <option value="">All blocks</option>
-            {blocOptions.map((b) => (
-              <option key={b} value={b}>
-                {b}
-              </option>
-            ))}
-          </select>
           <label className="sr-only" htmlFor="filter-statut">
             Filter by status
           </label>
@@ -100,7 +77,7 @@ export function StepList({
             id="filter-statut"
             value={filters.statut}
             onChange={(e) => onFilters({ ...filters, statut: e.target.value as Statut | "" })}
-            className="min-h-[40px] w-[130px] shrink-0 rounded-[10px] bg-card px-2.5 text-[15px] text-label outline-none focus:ring-2 focus:ring-blue/50"
+            className="min-h-[40px] w-full rounded-[10px] bg-card px-2.5 text-[15px] text-label outline-none focus:ring-2 focus:ring-blue/50"
           >
             <option value="">All statuses</option>
             {STATUTS.map((s) => (
@@ -125,7 +102,7 @@ export function StepList({
             {hasFilters ? "Change the search or filters." : "Drop an SAP screenshot to create the first one."}
           </p>
           {hasFilters && (
-            <button type="button" className="btn-plain mt-2" onClick={() => onFilters({ q: "", bloc: "", statut: "" })}>
+            <button type="button" className="btn-plain mt-2" onClick={() => onFilters({ q: "", statut: "" })}>
               Clear filters
             </button>
           )}

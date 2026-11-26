@@ -38,3 +38,13 @@ export function nextNum(steps: Pick<Step, "bloc" | "num">[], bloc: string, exclu
   }
   return n === null ? String(max + 1) : `${n}.${max + 1}`;
 }
+
+/** Numéro suivant pour tout le journal (1, 2, 3…), sans notion de bloc. */
+export function nextGlobalNum(steps: Pick<Step, "num">[]): string {
+  let max = 0;
+  for (const s of steps) {
+    const n = parseInt(s.num, 10);
+    if (!Number.isNaN(n) && /^\d+$/.test(s.num.trim())) max = Math.max(max, n);
+  }
+  return String(max + 1);
+}

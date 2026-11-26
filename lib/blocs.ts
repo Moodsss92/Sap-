@@ -12,7 +12,7 @@ export const BLOCS = [
   "11 · SD: documents and pricing",
 ] as const;
 
-export const NO_BLOC = "No block";
+export const NO_BLOC = "Steps";
 
 /** Numéro en tête du bloc (« 2 · Plants… » → 2), ou null. */
 export function blocNumber(bloc: string): number | null {

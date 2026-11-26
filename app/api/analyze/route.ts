@@ -1,7 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
-import { BLOCS, matchBloc } from "@/lib/blocs";
 import { requireMember } from "@/lib/supabase/server";
 import { normalizeTcode, tcodesForPrompt } from "@/lib/tcodes";
 
@@ -38,18 +37,12 @@ const ResultSchema = z.object({
   titre: text,
   chemin: text,
   action: text,
-  valeurs: text,
-  controle: text,
-  bloc: text,
 });
 
 function buildPrompt(): string {
   return `You are helping a team of SAP S/4HANA (MM/SD) trainees document the configuration of the Philo Televisions business case (company codes C2NL and C2BE copied from 1010, plants Breda, Delft, Brussels, Antwerp, purchasing orgs P2HQ/P2BR/P2BX/P2AN, sales orgs S2NL/S2BE). Here are SAP GUI or Fiori screenshots of one configuration step. Read the screen title, the fields, the values and the status bar message. Write in English. Reply ONLY with JSON:
-{"tcode":"","titre":"short step title","chemin":"full SPRO path separated by ' › '","action":"1 to 3 sentences","valeurs":"Field: value, one per line","controle":"visible message and what it means, or the check to do next","bloc":"one of the blocks in the list"}.
+{"tcode":"","titre":"short step title","chemin":"full SPRO path separated by ' › '","action":"what was configured on this screen and why, with the key values entered (2 to 4 sentences)"}.
 Do not invent anything that is not visible or certain; leave the string empty otherwise.
-
-Possible blocks:
-${BLOCS.join("\n")}
 
 Reference paths:
 ${tcodesForPrompt()}`;
@@ -178,9 +171,10 @@ export async function POST(request: NextRequest) {
     titre: parsed.titre.trim(),
     chemin: parsed.chemin.trim(),
     action: parsed.action.trim(),
-    valeurs: parsed.valeurs.trim(),
-    controle: parsed.controle.trim(),
-    bloc: matchBloc(parsed.bloc),
+    // Champs qui ne figurent plus dans le formulaire
+    valeurs: "",
+    controle: "",
+    bloc: "",
   };
 
   return NextResponse.json({ result, analyzed: paths.length, skipped: body.paths.length - paths.length });

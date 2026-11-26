@@ -33,7 +33,7 @@ export function StepDetail({
   onDuplicate,
   onCopy,
   onDelete,
-  onNextInBloc,
+  onNewStep,
   onAddFiles,
   uploadProgress,
   authorName,
@@ -50,7 +50,7 @@ export function StepDetail({
   onDuplicate: () => void;
   onCopy: () => void;
   onDelete: () => void;
-  onNextInBloc: () => void;
+  onNewStep: () => void;
   onAddFiles: (files: File[]) => void;
   uploadProgress: { done: number; total: number } | null;
   authorName?: string;
@@ -102,20 +102,20 @@ export function StepDetail({
         />
       </div>
 
-      {/* Infos groupées façon Réglages */}
+      {/* Les 4 champs de la fiche, façon Réglages */}
       <dl className="card inset-list mb-5 overflow-hidden">
-        <Row label="Block">{step.bloc || "—"}</Row>
-        <Row label="Owner">{step.resp || "—"}</Row>
-        <Row label="Transaction">{step.tcode ? <span className="font-mono font-semibold">{step.tcode}</span> : "—"}</Row>
+        <Row label="T-code">{step.tcode ? <span className="font-mono font-semibold">{step.tcode}</span> : "—"}</Row>
         <Row label="Path">
           {step.chemin ? <span className="font-mono text-[14px] text-blue">{step.chemin}</span> : "—"}
         </Row>
-      </dl>
-
-      <dl className="card inset-list mb-5 overflow-hidden">
-        <Row label="What we did">{step.action || <span className="text-label3">To be completed</span>}</Row>
-        <Row label="Values entered">{step.valeurs ? <span className="font-mono text-[14px]">{step.valeurs}</span> : "—"}</Row>
-        <Row label="Check">{step.controle || "—"}</Row>
+        <Row label="What I did">{step.action || <span className="text-label3">To be completed</span>}</Row>
+        {/* Champs des anciennes fiches : affichés seulement s'ils sont remplis */}
+        {step.valeurs && (
+          <Row label="Values entered">
+            <span className="font-mono text-[14px]">{step.valeurs}</span>
+          </Row>
+        )}
+        {step.controle && <Row label="Check">{step.controle}</Row>}
         {step.remarque && (
           <Row label="Issue / solution" tone="red">
             {step.remarque}
@@ -151,8 +151,8 @@ export function StepDetail({
         <button type="button" onClick={onEdit} className="btn-blue">
           <Icon name="edit" className="h-[18px] w-[18px]" /> Edit
         </button>
-        <button type="button" onClick={onNextInBloc} className="btn-tinted">
-          <Icon name="plus" className="h-[18px] w-[18px]" /> Next step in this block
+        <button type="button" onClick={onNewStep} className="btn-tinted">
+          <Icon name="plus" className="h-[18px] w-[18px]" /> New step
         </button>
         <button type="button" onClick={onDuplicate} className="btn-tinted">
           <Icon name="duplicate" className="h-[18px] w-[18px]" /> Duplicate

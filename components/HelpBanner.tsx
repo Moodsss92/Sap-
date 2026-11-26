@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Icon } from "./ui/Badges";
 
 const KEY = "sapjournal.help.hidden";
-const STEPS = ["Drop your screenshot", "Claude suggests T-code, path and values", "Write what you did", "Save"];
+const STEPS = ["Drop your screenshot", "Claude suggests title, T-code and path", "Write what you did", "Save"];
 
 export function HelpBanner() {
   const [hidden, setHidden] = useState(true);

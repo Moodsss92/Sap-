@@ -10,13 +10,9 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { BLOCS, matchBloc } from "@/lib/blocs";
-import { nextNum } from "@/lib/numbering";
 import { removeFiles, uploadCaptures } from "@/lib/storage";
 import { lookupTcode, normalizeTcode } from "@/lib/tcodes";
 import {
-  MEMBERS,
-  STATUTS,
   type AnalyzeResult,
   type DraftCapture,
   type Step,
@@ -24,8 +20,7 @@ import {
 } from "@/lib/types";
 import { AddCapturesZone } from "./AddCapturesZone";
 import { CaptureImage } from "./CaptureImage";
-import { Icon, StatutLabel, STATUT_STYLE } from "./ui/Badges";
-import { SegmentedControl } from "./ui/SegmentedControl";
+import { Icon } from "./ui/Badges";
 import { useToast } from "./ui/Toast";
 
 export interface FormInit {
@@ -36,7 +31,6 @@ export interface FormInit {
   autoAnalyze?: boolean;
   /** Fichiers déjà envoyés pour ce brouillon (à nettoyer si on annule). */
   uploaded?: string[];
-  numAuto?: boolean;
 }
 
 export interface StepFormHandle {
@@ -45,7 +39,7 @@ export interface StepFormHandle {
 }
 
 type AiField = keyof AnalyzeResult;
-const AI_FIELDS: AiField[] = ["tcode", "titre", "chemin", "action", "valeurs", "controle", "bloc"];
+const AI_FIELDS: AiField[] = ["tcode", "titre", "chemin", "action"];
 const MAX_ANALYZE = 5;
 
 function snapshot(fields: StepFields, drafts: DraftCapture[]) {
@@ -75,18 +69,15 @@ export const StepForm = forwardRef<
   StepFormHandle,
   {
     init: FormInit;
-    allSteps: Step[];
-    blocOptions: string[];
     onSave: (id: string, fields: StepFields, drafts: DraftCapture[], isNew: boolean) => Promise<void>;
     onCancel: () => void;
     onDirtyChange: (dirty: boolean) => void;
   }
->(function StepForm({ init, allSteps, blocOptions, onSave, onCancel, onDirtyChange }, ref) {
+>(function StepForm({ init, onSave, onCancel, onDirtyChange }, ref) {
   const toast = useToast();
   const [fields, setFields] = useState<StepFields>(init.fields);
   const [drafts, setDrafts] = useState<DraftCapture[]>(init.drafts);
   const [suggested, setSuggested] = useState<Set<keyof StepFields>>(new Set());
-  const [numAuto, setNumAuto] = useState(!!init.numAuto);
   const [saving, setSaving] = useState(false);
   const [upload, setUpload] = useState<{ done: number; total: number } | null>(null);
   const [analysis, setAnalysis] = useState<{ state: "idle" | "running" | "done" | "error"; message?: string }>({ state: "idle" });
@@ -125,19 +116,6 @@ export const StepForm = forwardRef<
       return next;
     });
   }, []);
-
-  const numFor = useCallback(
-    (bloc: string) => (bloc ? nextNum(allSteps.filter((s) => s.id !== init.id), bloc) : ""),
-    [allSteps, init.id],
-  );
-
-  function changeBloc(bloc: string) {
-    set("bloc", bloc);
-    if (numAuto || !fieldsRef.current.num) {
-      setFields((f) => ({ ...f, num: numFor(bloc) }));
-      setNumAuto(true);
-    }
-  }
 
   /** T-code → chemin et titre depuis le dictionnaire local, s'ils sont vides. */
   function changeTcode(raw: string) {
@@ -188,7 +166,7 @@ export const StepForm = forwardRef<
       const next: StepFields = { ...cur };
       const filled: (keyof StepFields)[] = [];
       for (const k of AI_FIELDS) {
-        const v = k === "bloc" ? matchBloc(r.bloc) : k === "tcode" ? normalizeTcode(r.tcode) : r[k];
+        const v = k === "tcode" ? normalizeTcode(r.tcode) : r[k];
         if (v && !cur[k].trim()) {
           next[k] = v;
           filled.push(k);
@@ -206,10 +184,6 @@ export const StepForm = forwardRef<
           filled.push("titre");
         }
       }
-      if (filled.includes("bloc") && (numAuto || !next.num)) {
-        next.num = numFor(next.bloc);
-        setNumAuto(true);
-      }
       setFields(next);
       setSuggested((s) => new Set([...Array.from(s), ...filled]));
       const n = new Set(filled).size;
@@ -218,7 +192,7 @@ export const StepForm = forwardRef<
         state: "done",
         message:
           n > 0
-            ? `Claude filled ${n} field${n > 1 ? "s" : ""}. Review it and complete "What we did".${more}`
+            ? `Claude filled ${n} field${n > 1 ? "s" : ""}. Review it and complete "What I did".${more}`
             : `Claude found nothing to add: the fields were already filled or unreadable.${more}`,
       });
     } catch (e) {
@@ -233,7 +207,7 @@ export const StepForm = forwardRef<
     } finally {
       if (abort.current === ctrl) abort.current = null;
     }
-  }, [numAuto, numFor]);
+  }, []);
 
   const autoRan = useRef(false);
   useEffect(() => {
@@ -325,7 +299,6 @@ export const StepForm = forwardRef<
   }, [save, onCancel]);
 
   const running = analysis.state === "running";
-  const allBlocs = Array.from(new Set([...BLOCS, ...blocOptions.filter(Boolean)]));
 
   return (
     <form
@@ -387,80 +360,29 @@ export const StepForm = forwardRef<
         )}
       </div>
 
-      {/* Identification */}
+      {/* Les 4 champs à remplir */}
       <div className="card inset-list mb-4 overflow-hidden">
-        <div className="grid grid-cols-[1fr_96px]">
-          <Field label="T-code" htmlFor="f-tcode">
-            <input
-              id="f-tcode"
-              className="ios-input font-mono uppercase"
-              value={fields.tcode}
-              onChange={(e) => changeTcode(e.target.value)}
-              placeholder="e.g. OX18"
-              autoComplete="off"
-              spellCheck={false}
-              autoFocus={!init.autoAnalyze}
-            />
-          </Field>
-          <Field label="No." htmlFor="f-num">
-            <input
-              id="f-num"
-              className="ios-input tabular-nums"
-              value={fields.num}
-              onChange={(e) => {
-                set("num", e.target.value);
-                setNumAuto(false);
-              }}
-              placeholder="1.8"
-              inputMode="decimal"
-            />
-          </Field>
-        </div>
-        <Field label="Block" htmlFor="f-bloc" hint={<SuggestHint show={suggested.has("bloc")} />}>
-          <input
-            id="f-bloc"
-            list="bloc-options"
-            className="ios-input"
-            value={fields.bloc}
-            onChange={(e) => changeBloc(e.target.value)}
-            placeholder="Choose or type a block"
-          />
-          <datalist id="bloc-options">
-            {allBlocs.map((b) => (
-              <option key={b} value={b} />
-            ))}
-          </datalist>
-        </Field>
         <Field label="Title" htmlFor="f-titre" hint={<SuggestHint show={suggested.has("titre")} />}>
-          <input id="f-titre" className="ios-input" value={fields.titre} onChange={(e) => set("titre", e.target.value)} placeholder="e.g. Assign plant to company code" />
-        </Field>
-        <Field label="Owner" htmlFor="f-resp">
-          <select id="f-resp" className="ios-input" value={fields.resp} onChange={(e) => set("resp", e.target.value)}>
-            <option value="">—</option>
-            {MEMBERS.map((m) => (
-              <option key={m} value={m}>
-                {m}
-              </option>
-            ))}
-            {fields.resp && !(MEMBERS as readonly string[]).includes(fields.resp) && <option value={fields.resp}>{fields.resp}</option>}
-          </select>
-        </Field>
-        <div className="px-4 py-3">
-          <span className="mb-1.5 block text-[13px] font-medium text-label3" id="f-statut-label">
-            Status
-          </span>
-          <SegmentedControl
-            label="Status"
-            size="sm"
-            value={fields.statut}
-            onChange={(v) => set("statut", v)}
-            segments={STATUTS.map((s) => ({ value: s, label: <StatutLabel statut={s} />, tint: STATUT_STYLE[s].text }))}
+          <input
+            id="f-titre"
+            className="ios-input"
+            value={fields.titre}
+            onChange={(e) => set("titre", e.target.value)}
+            placeholder="e.g. Assign plant to company code"
+            autoFocus={!init.autoAnalyze}
           />
-        </div>
-      </div>
-
-      {/* Contenu */}
-      <div className="card inset-list mb-4 overflow-hidden">
+        </Field>
+        <Field label="T-code" htmlFor="f-tcode" hint={<SuggestHint show={suggested.has("tcode")} />}>
+          <input
+            id="f-tcode"
+            className="ios-input font-mono uppercase"
+            value={fields.tcode}
+            onChange={(e) => changeTcode(e.target.value)}
+            placeholder="e.g. OX18"
+            autoComplete="off"
+            spellCheck={false}
+          />
+        </Field>
         <Field label="Path" htmlFor="f-chemin" hint={<SuggestHint show={suggested.has("chemin")} />}>
           <textarea
             id="f-chemin"
@@ -471,17 +393,15 @@ export const StepForm = forwardRef<
             placeholder="SPRO › Enterprise Structure › …"
           />
         </Field>
-        <Field label="What we did" htmlFor="f-action" hint={<SuggestHint show={suggested.has("action")} />}>
-          <textarea id="f-action" rows={3} className="ios-input resize-y" value={fields.action} onChange={(e) => set("action", e.target.value)} placeholder="Explain in 1 to 3 sentences what you configured and why." />
-        </Field>
-        <Field label="Values entered" htmlFor="f-valeurs" hint={<SuggestHint show={suggested.has("valeurs")} />}>
-          <textarea id="f-valeurs" rows={4} className="ios-input resize-y font-mono text-[14px]" value={fields.valeurs} onChange={(e) => set("valeurs", e.target.value)} placeholder={"Field: value\nPlant: 2BRE"} />
-        </Field>
-        <Field label="Check" htmlFor="f-controle" hint={<SuggestHint show={suggested.has("controle")} />}>
-          <textarea id="f-controle" rows={2} className="ios-input resize-y" value={fields.controle} onChange={(e) => set("controle", e.target.value)} placeholder="Status bar message, transaction used to verify…" />
-        </Field>
-        <Field label="Issue / solution" htmlFor="f-remarque">
-          <textarea id="f-remarque" rows={2} className="ios-input resize-y text-red placeholder:text-red/50" value={fields.remarque} onChange={(e) => set("remarque", e.target.value)} placeholder="Error you hit and how you solved it" />
+        <Field label="What I did" htmlFor="f-action" hint={<SuggestHint show={suggested.has("action")} />}>
+          <textarea
+            id="f-action"
+            rows={4}
+            className="ios-input resize-y"
+            value={fields.action}
+            onChange={(e) => set("action", e.target.value)}
+            placeholder="Explain what you configured and why."
+          />
         </Field>
       </div>
 

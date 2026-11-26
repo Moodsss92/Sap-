@@ -7,7 +7,7 @@ import { useSession } from "@/hooks/useSession";
 import { usePrefetchSigned } from "@/hooks/useSignedUrl";
 import { copyToClipboard, journalToText, stepToText } from "@/lib/exportText";
 import { imagesFromDataTransfer } from "@/lib/images";
-import { nextNum } from "@/lib/numbering";
+import { nextGlobalNum } from "@/lib/numbering";
 import { copyFiles, uploadCaptures } from "@/lib/storage";
 import { EMPTY_FIELDS, STATUT_LABEL, type ComposedDoc, type DraftCapture, type MemberName, type Statut, type Step, type StepFields } from "@/lib/types";
 import { ExportSheet, type ExportKind } from "./ExportSheet";
@@ -51,7 +51,7 @@ export function JournalApp() {
   // ---------- État de l'interface ----------
   const [tab, setTab] = useState<Tab>("all");
   const tabInit = useRef(false);
-  const [filters, setFilters] = useState<ListFilters>({ q: "", bloc: "", statut: "" });
+  const [filters, setFilters] = useState<ListFilters>({ q: "", statut: "" });
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [form, setForm] = useState<FormInit | null>(null);
   const [formKey, setFormKey] = useState(0);
@@ -104,14 +104,12 @@ export function JournalApp() {
       steps.filter(
         (s) =>
           (tab === "all" || s.resp === tab) &&
-          (!filters.bloc || s.bloc === filters.bloc) &&
           (!filters.statut || s.statut === filters.statut) &&
           matchesQuery(s, filters.q.trim()),
       ),
     [steps, tab, filters],
   );
 
-  const allBlocs = useMemo(() => Array.from(new Set(steps.map((s) => s.bloc))), [steps]);
   const selected = steps.find((s) => s.id === selectedId) ?? null;
   const selectedCaptures = useMemo(() => (selected ? capturesByStep.get(selected.id) ?? [] : []), [selected, capturesByStep]);
   usePrefetchSigned(selectedCaptures.map((c) => c.path));
@@ -149,7 +147,6 @@ export function JournalApp() {
     setFormKey((k) => k + 1);
   }, []);
 
-  const defaultResp = (): string => (tab !== "all" ? tab : me?.name ?? "");
 
   // ---------- Création depuis des captures ----------
   const createFromFiles = useCallback(
@@ -159,15 +156,13 @@ export function JournalApp() {
       const id = crypto.randomUUID();
       try {
         const paths = await uploadCaptures(id, files, (done, total) => setNewUpload({ done, total }));
-        const bloc = filters.bloc;
         openForm({
           id,
           isNew: true,
-          fields: { ...EMPTY_FIELDS, bloc, num: bloc ? nextNum(steps, bloc) : "", resp: tab !== "all" ? tab : me?.name ?? "", statut: "encours" },
+          fields: { ...EMPTY_FIELDS, resp: me?.name ?? "", statut: "encours" },
           drafts: paths.map((path) => ({ key: path, path, legende: "" })),
           uploaded: paths,
           autoAnalyze: true,
-          numAuto: true,
         });
       } catch (e) {
         toast(e instanceof Error ? e.message : "Could not upload the screenshots.", "error", 6000);
@@ -175,7 +170,7 @@ export function JournalApp() {
         setNewUpload(null);
       }
     },
-    [newUpload, leaveForm, filters.bloc, steps, tab, me, openForm, toast],
+    [newUpload, leaveForm, me, openForm, toast],
   );
 
   const addToSelected = useCallback(
@@ -237,13 +232,15 @@ export function JournalApp() {
   // ---------- Actions de la fiche ----------
   const onSave = useCallback(
     async (id: string, fields: StepFields, drafts: DraftCapture[], isNew: boolean) => {
-      await journal.saveStep(id, fields, drafts, isNew);
+      // Numéro attribué à l'enregistrement (1, 2, 3…) pour limiter les doublons entre collègues
+      const toSave = isNew && !fields.num ? { ...fields, num: nextGlobalNum(steps) } : fields;
+      await journal.saveStep(id, toSave, drafts, isNew);
       setForm(null);
       setDirty(false);
       setSelectedId(id);
       toast(isNew ? "Step created" : "Changes saved", "success");
     },
-    [journal, toast],
+    [journal, steps, toast],
   );
 
   const cancelForm = useCallback(() => {
@@ -272,20 +269,18 @@ export function JournalApp() {
     openForm({
       id,
       isNew: true,
-      fields: { ...stepFields(s), num: s.bloc ? nextNum(steps, s.bloc) : "", titre: s.titre ? `${s.titre} (copy)` : "", statut: "afaire" },
+      fields: { ...stepFields(s), num: "", bloc: "", resp: me?.name ?? s.resp, titre: s.titre ? `${s.titre} (copy)` : "", statut: "afaire" },
       drafts,
       uploaded,
-      numAuto: true,
     });
   };
 
-  const nextInBloc = (s: Step) =>
+  const newStep = () =>
     openForm({
       id: crypto.randomUUID(),
       isNew: true,
-      fields: { ...EMPTY_FIELDS, bloc: s.bloc, num: s.bloc ? nextNum(steps, s.bloc) : "", resp: s.resp || defaultResp(), statut: "afaire" },
+      fields: { ...EMPTY_FIELDS, resp: me?.name ?? "", statut: "afaire" },
       drafts: [],
-      numAuto: true,
     });
 
   const remove = async (s: Step) => {
@@ -483,7 +478,7 @@ export function JournalApp() {
         <div className="mx-auto max-w-[1280px] px-4">
           <div className="flex min-h-[52px] items-center gap-x-3 py-1.5">
             <div className="mr-auto flex min-w-0 flex-1 items-center gap-2">
-              <h1 className="truncate text-[20px] font-bold tracking-tight">Journal SAP</h1>
+              <h1 className="truncate text-[20px] font-bold tracking-tight">SAP Log</h1>
               <span
                 className={`h-2 w-2 shrink-0 rounded-full ${journal.live ? "bg-green" : "bg-label3"}`}
                 title={journal.live ? "Synced in real time" : "Connecting to real time…"}
@@ -547,7 +542,6 @@ export function JournalApp() {
           )}
           <StepList
             steps={visible}
-            allBlocs={allBlocs}
             capturesByStep={capturesByStep}
             filters={filters}
             onFilters={setFilters}
@@ -563,8 +557,6 @@ export function JournalApp() {
               key={formKey}
               ref={formRef}
               init={form}
-              allSteps={steps}
-              blocOptions={allBlocs}
               onSave={onSave}
               onCancel={cancelForm}
               onDirtyChange={setDirty}
@@ -590,7 +582,7 @@ export function JournalApp() {
                 }
               }}
               onDelete={() => remove(selected)}
-              onNextInBloc={() => nextInBloc(selected)}
+              onNewStep={newStep}
               onAddFiles={addToSelected}
               uploadProgress={detailUpload}
               authorName={nameOf(selected.author_id)}
