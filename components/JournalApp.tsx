@@ -10,7 +10,7 @@ import { imagesFromDataTransfer } from "@/lib/images";
 import { nextNum } from "@/lib/numbering";
 import { copyFiles, uploadCaptures } from "@/lib/storage";
 import { getSupabase } from "@/lib/supabase/client";
-import { EMPTY_FIELDS, STATUT_LABEL, type DraftCapture, type MemberName, type Statut, type Step, type StepFields } from "@/lib/types";
+import { EMPTY_FIELDS, STATUT_LABEL, type ComposedDoc, type DraftCapture, type MemberName, type Statut, type Step, type StepFields } from "@/lib/types";
 import { ExportSheet, type ExportKind } from "./ExportSheet";
 import { HelpBanner } from "./HelpBanner";
 import { NewFromCaptureButton } from "./NewFromCaptureButton";
@@ -63,6 +63,7 @@ export function JournalApp() {
   const [whoOpen, setWhoOpen] = useState(false);
   const [exporting, setExporting] = useState<string | null>(null);
   const [exportOpen, setExportOpen] = useState(false);
+  const composeAbort = useRef<AbortController | null>(null);
   const [alert, setAlert] = useState<(AlertOptions & { resolve: (ok: boolean) => void }) | null>(null);
   const headerRef = useRef<HTMLElement>(null);
 
@@ -361,9 +362,57 @@ export function JournalApp() {
     }
   };
 
-  const runExport = (k: ExportKind) => {
+  const exportFinal = async (onlyDone: boolean) => {
+    const list = onlyDone ? steps.filter((st) => st.statut === "fait") : steps;
+    if (!list.length) return toast(onlyDone ? "Aucune étape au statut « Fait » pour l'instant." : "Le journal est vide.", "error");
+    const ctrl = new AbortController();
+    composeAbort.current = ctrl;
+    setExporting("Claude rédige…");
+    let composed: ComposedDoc | null = null;
+    try {
+      const res = await fetch("/api/compose", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ onlyDone }),
+        signal: ctrl.signal,
+      });
+      const body = (await res.json().catch(() => ({}))) as { result?: ComposedDoc; error?: string };
+      if (!res.ok || !body.result) throw new Error(body.error || `Erreur ${res.status}`);
+      composed = body.result;
+    } catch (e) {
+      composeAbort.current = null;
+      setExporting(null);
+      const stopped = ctrl.signal.aborted;
+      const ok = await confirm({
+        title: stopped ? "Rédaction arrêtée" : "Claude n'a pas pu rédiger",
+        message: `${stopped ? "" : (e instanceof Error ? e.message : "Erreur inconnue") + " "}Exporter quand même le document, sans synthèse ni introductions ?`,
+        confirmLabel: "Exporter",
+      });
+      if (!ok) return;
+    }
+    composeAbort.current = null;
+    setExporting("Mise en page…");
+    try {
+      const { exportFinalDocx, downloadBlob } = await import("@/lib/exportDocx");
+      const blob = await exportFinalDocx(steps, capturesByStep, {
+        composed,
+        onlyDone,
+        nameOf,
+        onProgress: (d, t) => setExporting(t ? `Captures ${d}/${t}` : "Mise en page…"),
+      });
+      downloadBlob(blob, `documentation-sap-philo${onlyDone ? "-etapes-faites" : ""}-${today()}.docx`);
+      toast("Documentation finale exportée", "success");
+    } catch (e) {
+      toast(e instanceof Error ? `Export impossible : ${e.message}` : "Export impossible.", "error", 6000);
+    } finally {
+      setExporting(null);
+    }
+  };
+
+  const runExport = (k: ExportKind, opts: { onlyDone: boolean }) => {
     setExportOpen(false);
-    if (k === "team-docx") exportWord(true);
+    if (k === "final-docx") exportFinal(opts.onlyDone);
+    else if (k === "team-docx") exportWord(true);
     else if (k === "team-zip") exportZip();
     else if (k === "view-docx") exportWord(false);
     else copyJournal();
@@ -418,10 +467,18 @@ export function JournalApp() {
               />
             </div>
             <div className="flex shrink-0 items-center gap-0.5">
-              <button type="button" onClick={() => setExportOpen(true)} disabled={!!exporting} aria-label="Exporter" className="btn-plain px-2 text-[15px]">
-                <Icon name="doc" className="h-[18px] w-[18px]" />
-                <span className={exporting ? "" : "hidden sm:inline"}>{exporting ?? "Exporter"}</span>
-              </button>
+              {exporting && composeAbort.current ? (
+                <button type="button" onClick={() => composeAbort.current?.abort()} className="btn-plain px-2 text-[15px]">
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-blue border-t-transparent" aria-hidden />
+                  <span>{exporting}</span>
+                  <span className="text-red">Arrêter</span>
+                </button>
+              ) : (
+                <button type="button" onClick={() => setExportOpen(true)} disabled={!!exporting} aria-label="Exporter" className="btn-plain px-2 text-[15px]">
+                  <Icon name="doc" className="h-[18px] w-[18px]" />
+                  <span className={exporting ? "" : "hidden sm:inline"}>{exporting ?? "Exporter"}</span>
+                </button>
+              )}
               <button type="button" onClick={copyJournal} aria-label="Copier en texte" className="btn-plain px-2 text-[15px]">
                 <Icon name="copy" className="h-[18px] w-[18px]" />
                 <span className="hidden sm:inline">Copier en texte</span>
@@ -546,6 +603,7 @@ export function JournalApp() {
         onClose={() => setExportOpen(false)}
         onExport={runExport}
         teamCount={steps.length}
+        doneCount={steps.filter((st) => st.statut === "fait").length}
         teamCaptures={journal.captures.length}
         viewCount={visible.length}
         scopeLabel={scopeLabel}

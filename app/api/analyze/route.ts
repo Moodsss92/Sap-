@@ -2,7 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { BLOCS, matchBloc } from "@/lib/blocs";
-import { getAdminSupabase, getServerSupabase } from "@/lib/supabase/server";
+import { getAdminSupabase, requireMember } from "@/lib/supabase/server";
 import { normalizeTcode, tcodesForPrompt } from "@/lib/tcodes";
 
 export const runtime = "nodejs";
@@ -80,14 +80,8 @@ function fail(message: string, status: number) {
 
 export async function POST(request: NextRequest) {
   // 1. Utilisateur connecté et membre de l'équipe
-  const supabase = getServerSupabase();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return fail("Session expirée : reconnecte-toi.", 401);
-
-  const { data: member } = await supabase.from("members").select("id").eq("id", user.id).maybeSingle();
-  if (!member) return fail("Choisis d'abord ton nom dans l'équipe.", 403);
+  const auth = await requireMember();
+  if (!auth.ok) return fail(auth.error, auth.status);
 
   if (!process.env.ANTHROPIC_API_KEY) {
     return fail("La clé ANTHROPIC_API_KEY n'est pas configurée sur le serveur.", 500);

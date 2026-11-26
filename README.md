@@ -13,6 +13,7 @@ Pour chaque étape : transaction, chemin SPRO, ce qu'on a fait, valeurs saisies,
 - Auto-complétion du chemin et du titre à partir du T-code (`lib/tcodes.ts`), numérotation automatique dans le bloc.
 - Fiche détaillée façon Réglages iOS : statut en un clic, lightbox, ajout de captures sans passer par « Modifier », Dupliquer, Copier, Supprimer.
 - **Exports** (bouton « Exporter ») :
+  - **Documentation finale (Word)** : le travail de chacun regroupé en un seul document cohérent. Claude relit tout le journal et rédige uniquement le texte de liaison : une synthèse, une introduction par bloc (ce qu'on configure, pourquoi, lien avec les autres blocs) et une liste de points à vérifier (incohérences entre fiches, contrôles manquants). Les fiches sont reproduites telles quelles. Le document contient une page de titre, un sommaire, la structure organisationnelle, un chapitre par bloc et des annexes (problèmes rencontrés et solutions, points à vérifier, avancement et contributions). Option « Seulement les étapes faites ». Si Claude est indisponible, l'export se fait quand même, sans le texte de liaison.
   - **Dossier complet de l'équipe (Word)** : les fiches de tout le monde, quel que soit l'onglet ouvert, rassemblées dans l'ordre du business case. La première page fait la synthèse : avancement par bloc avec ses contributeurs, contribution de chacun, et « pièces manquantes » (blocs sans étape, étapes pas encore faites). Chaque fiche indique son statut, son responsable, qui l'a rédigée et qui l'a complétée. Les captures sont intégrées (largeur max. 600 px) avec leur légende.
   - **Captures de l'équipe (ZIP)** : un dossier par bloc (`01 - Company codes et FI/`), un sous-dossier par étape (`1.4 - OBY6 - Paramètres globaux/`), avec les captures numérotées et légendées et un `fiche.txt`. Un `00 - LISEZMOI.txt` résume l'assemblage et contient le journal complet.
   - **Vue actuelle en Word** et **copie en texte** : seulement l'onglet et les filtres en cours.
@@ -27,7 +28,8 @@ Pour chaque étape : transaction, chemin SPRO, ce qu'on a fait, valeurs saisies,
 │   ├── page.tsx                     Application (client)
 │   ├── login/page.tsx               Connexion par magic link
 │   ├── auth/callback/route.ts       Échange du code Supabase → session
-│   └── api/analyze/route.ts         Lecture des captures par Claude (serveur uniquement)
+│   ├── api/analyze/route.ts         Lecture des captures par Claude (serveur uniquement)
+│   └── api/compose/route.ts         Texte de liaison de la documentation finale (serveur uniquement)
 ├── components/
 │   ├── JournalApp.tsx               Orchestration : onglets, split view, collage, exports
 │   ├── StepList.tsx, StepDetail.tsx, StepForm.tsx
@@ -41,6 +43,7 @@ Pour chaque étape : transaction, chemin SPRO, ce qu'on a fait, valeurs saisies,
 │   ├── blocs.ts, numbering.ts       Blocs proposés, numérotation automatique
 │   ├── storage.ts, images.ts        Upload, URLs signées, compression des captures
 │   ├── exportDocx.ts, exportZip.ts, exportText.ts
+│   ├── businessCase.ts              Structure organisationnelle Philo Televisions
 │   ├── teamSummary.ts               Assemblage : avancement par bloc, par membre, pièces manquantes
 │   └── supabase/                    Clients navigateur et serveur
 ├── middleware.ts                    Rafraîchit la session et protège les pages
@@ -106,7 +109,7 @@ Autres commandes : `npm run build` (build de production), `npm run lint`, `npm r
 2. Ajoute les variables d'environnement ci-dessus dans **Settings › Environment Variables**.
 3. Déploie, puis ajoute l'URL obtenue dans Supabase : Site URL et Redirect URL `…/auth/callback`.
 
-`/api/analyze` déclare `maxDuration = 60` s. La lecture de 5 captures prend en général 10 à 30 s.
+`/api/analyze` déclare `maxDuration = 60` s : la lecture de 5 captures prend en général 10 à 30 s. `/api/compose` déclare `maxDuration = 120` s pour relire tout le journal, ce que le plan gratuit de Vercel accepte quand Fluid Compute est activé (réglage par défaut des nouveaux projets).
 
 ## Lecture des captures par Claude
 
