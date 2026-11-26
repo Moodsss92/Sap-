@@ -21,7 +21,7 @@ Pour chaque étape : transaction, chemin SPRO, ce qu'on a fait, valeurs saisies,
 ## Structure
 
 ```
-sap-journal/
+.
 ├── app/
 │   ├── layout.tsx, globals.css      Thème iOS (variables clair / sombre)
 │   ├── page.tsx                     Application (client)
@@ -54,7 +54,6 @@ sap-journal/
 ### 1. Dépendances
 
 ```bash
-cd sap-journal
 npm i
 ```
 
@@ -103,10 +102,9 @@ Autres commandes : `npm run build` (build de production), `npm run lint`, `npm r
 
 ## Déploiement sur Vercel
 
-1. Pousse le dépôt sur GitHub, puis importe-le dans Vercel (**Add New › Project**).
-2. **Root Directory** : `sap-journal`. Le reste du dépôt est le site vitrine statique. Vercel détecte Next.js.
-3. Ajoute les variables d'environnement ci-dessus dans **Settings › Environment Variables**.
-4. Déploie, puis ajoute l'URL obtenue dans Supabase : Site URL et Redirect URL `…/auth/callback`.
+1. Importe le dépôt `Moodsss92/Sap-` dans Vercel (**Add New › Project**). Vercel détecte Next.js, rien d'autre à régler.
+2. Ajoute les variables d'environnement ci-dessus dans **Settings › Environment Variables**.
+3. Déploie, puis ajoute l'URL obtenue dans Supabase : Site URL et Redirect URL `…/auth/callback`.
 
 `/api/analyze` déclare `maxDuration = 60` s. La lecture de 5 captures prend en général 10 à 30 s.
 
