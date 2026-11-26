@@ -83,3 +83,10 @@ export const EMPTY_FIELDS: StepFields = {
   resp: "",
   statut: "afaire",
 };
+
+/** Texte de liaison rédigé par Claude pour la documentation finale (/api/compose). */
+export interface ComposedDoc {
+  synthese: string;
+  blocs: { bloc: string; intro: string }[];
+  aVerifier: { num: string; point: string }[];
+}

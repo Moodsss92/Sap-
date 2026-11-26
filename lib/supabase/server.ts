@@ -32,3 +32,20 @@ export function getAdminSupabase(): SupabaseClient {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 }
+
+/**
+ * Vérifie que l'appelant est connecté et membre de l'équipe.
+ * Renvoie le client lié à sa session, ou un message d'erreur et un code HTTP.
+ */
+export async function requireMember(): Promise<
+  { ok: true; supabase: SupabaseClient; userId: string } | { ok: false; error: string; status: number }
+> {
+  const supabase = getServerSupabase();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "Session expirée : reconnecte-toi.", status: 401 };
+  const { data: member } = await supabase.from("members").select("id").eq("id", user.id).maybeSingle();
+  if (!member) return { ok: false, error: "Choisis d'abord ton nom dans l'équipe.", status: 403 };
+  return { ok: true, supabase, userId: user.id };
+}
