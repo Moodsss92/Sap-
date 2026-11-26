@@ -47,7 +47,7 @@ export function Alert({
         className="anim-pop relative w-[270px] overflow-hidden rounded-[14px] bg-card/95 text-center shadow-pop backdrop-blur-xl dark:bg-[#2C2C2E]/95"
       >
         <div className="px-4 pb-4 pt-5">
-          <h2 id="alert-title" className="text-[17px] font-semibold">
+          <h2 id="alert-title" className="text-[15px] font-semibold">
             {options.title}
           </h2>
           {options.message && (
@@ -61,7 +61,7 @@ export function Alert({
             ref={cancelRef}
             type="button"
             onClick={onCancel}
-            className="min-h-[44px] flex-1 text-[17px] text-blue active:bg-fill/20"
+            className="min-h-[44px] flex-1 text-[15px] text-blue active:bg-fill/20"
           >
             {options.cancelLabel ?? "Cancel"}
           </button>
@@ -69,7 +69,7 @@ export function Alert({
           <button
             type="button"
             onClick={onConfirm}
-            className={`min-h-[44px] flex-1 text-[17px] font-semibold active:bg-fill/20 ${
+            className={`min-h-[44px] flex-1 text-[15px] font-semibold active:bg-fill/20 ${
               options.destructive ? "text-red" : "text-blue"
             }`}
           >

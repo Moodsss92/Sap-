@@ -50,7 +50,7 @@ export function WhoAreYouSheet({
               <span className="flex h-9 w-9 items-center justify-center rounded-full bg-blue/15 text-[15px] font-semibold text-blue">
                 {name[0]}
               </span>
-              <span className="flex-1 text-[17px]">{name}</span>
+              <span className="flex-1 text-[15px]">{name}</span>
               {busy === name ? (
                 <span className="text-[14px] text-label3">…</span>
               ) : current === name ? (

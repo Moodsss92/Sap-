@@ -22,6 +22,7 @@ L'interface est en **anglais**. Chaque étape tient en **4 champs** : titre, T-c
   - **Captures de l'équipe (ZIP)** : un dossier par bloc (`01 - Company codes et FI/`), un sous-dossier par étape (`1.4 - OBY6 - Paramètres globaux/`), avec les captures numérotées et légendées et un `fiche.txt`. Un `00 - LISEZMOI.txt` résume l'assemblage et contient le journal complet.
   - **Vue actuelle en Word** et **copie en texte** : seulement l'onglet et les filtres en cours.
 - Synchronisation **temps réel** (Supabase Realtime) et mode sombre automatique.
+- **Pensée pour PC** : liste et fiche toujours côte à côte (largeur minimale 1100 px, jusqu'à 1600 px), texte compact, fenêtres de dialogue centrées.
 
 ## Structure
 

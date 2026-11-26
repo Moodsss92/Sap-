@@ -50,11 +50,8 @@ export function BottomSheet({
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className="anim-sheet relative w-full max-w-[520px] rounded-t-[20px] bg-bg pb-[max(env(safe-area-inset-bottom),20px)] shadow-sheet split:rounded-[20px] split:pb-5"
+        className="anim-pop relative w-full max-w-[480px] rounded-[16px] bg-bg pb-5 pt-2 shadow-pop"
       >
-        <div className="flex justify-center pt-2">
-          <span className="h-[5px] w-9 rounded-full bg-label3/50" aria-hidden />
-        </div>
         {children}
       </div>
     </div>

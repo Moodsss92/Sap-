@@ -6,7 +6,8 @@ const config: Config = {
   content: ["./app/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}", "./hooks/**/*.{ts,tsx}"],
   theme: {
     extend: {
-      screens: { split: "860px" },
+      // App utilisée sur PC : la vue « split » (liste + fiche côte à côte) est toujours active.
+      screens: { split: "0px" },
       colors: {
         bg: v("bg"),
         card: v("card"),

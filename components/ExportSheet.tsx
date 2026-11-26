@@ -62,13 +62,13 @@ export function ExportSheet({
             key={o.kind}
             type="button"
             onClick={() => onExport(o.kind, { onlyDone })}
-            className="flex min-h-[60px] w-full items-center gap-3 px-4 py-2.5 text-left active:bg-fill/20"
+            className="flex min-h-[50px] w-full items-center gap-3 px-4 py-2.5 text-left active:bg-fill/20"
           >
             <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[9px] bg-blue text-white">
               <Icon name={o.icon} className="h-5 w-5" />
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block text-[16px] font-medium">{o.title}</span>
+              <span className="block text-[14px] font-medium">{o.title}</span>
               <span className="block text-[13px] leading-snug text-label3">{o.detail}</span>
             </span>
             <Icon name="chevron-right" className="h-4 w-4 shrink-0 text-label3" />
@@ -94,7 +94,7 @@ export function ExportSheet({
               <Icon name="doc" className="h-6 w-6" />
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block text-[17px] font-semibold">Final documentation (Word)</span>
+              <span className="block text-[15px] font-semibold">Final documentation (Word)</span>
               <span className="block text-[13px] leading-snug text-label3">
                 Everyone&apos;s work in one structured document: title page, contents, organizational structure, every
                 step with its screenshots, and appendices (issues, progress and contributions).
@@ -104,7 +104,7 @@ export function ExportSheet({
           </button>
           <label className="flex min-h-[52px] cursor-pointer items-center gap-3 px-4">
             <span className="min-w-0 flex-1">
-              <span className="block text-[16px]">Only completed steps</span>
+              <span className="block text-[14px]">Only completed steps</span>
               <span className="block text-[13px] text-label3">
                 {onlyDone ? `${s(doneCount, "step")} of ${teamCount}` : `All steps (${teamCount})`}
               </span>

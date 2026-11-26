@@ -175,7 +175,7 @@ export function StepList({
             placeholder="Search (T-code, title, values…)"
             value={filters.q}
             onChange={(e) => onFilters({ ...filters, q: e.target.value })}
-            className="w-full rounded-[10px] bg-fill/[0.12] py-2.5 pl-9 pr-3 text-[17px] outline-none placeholder:text-label3 focus:ring-2 focus:ring-blue/50"
+            className="w-full rounded-[10px] bg-fill/[0.12] py-2.5 pl-9 pr-3 text-[15px] outline-none placeholder:text-label3 focus:ring-2 focus:ring-blue/50"
           />
         </div>
         <div className="flex gap-2">
@@ -237,7 +237,7 @@ export function StepList({
         </div>
       ) : groups.length === 0 ? (
         <div className="card px-4 py-8 text-center">
-          <p className="text-[17px] font-semibold">{hasFilters ? "No results" : "No blocks yet"}</p>
+          <p className="text-[15px] font-semibold">{hasFilters ? "No results" : "No blocks yet"}</p>
           <p className="mt-1 text-[14px] text-label3">
             {hasFilters ? "Change the search or filters." : "Create Block 1 and give it a name, then add your screenshots to it."}
           </p>
@@ -323,7 +323,7 @@ export function StepList({
                               if (!suppressClick.current) onSelect(s.id);
                             }}
                             aria-current={active ? "true" : undefined}
-                            className={`flex min-h-[60px] min-w-0 flex-1 items-center gap-3 py-2.5 text-left transition ${
+                            className={`flex min-h-[50px] min-w-0 flex-1 items-center gap-3 py-2.5 text-left transition ${
                               reorder.enabled ? "cursor-grab pl-1 pr-4" : "px-4"
                             } ${active ? "bg-blue/10 dark:bg-blue/25" : "active:bg-fill/15"}`}
                           >
@@ -342,7 +342,7 @@ export function StepList({
                             )}
                             <span className="w-9 shrink-0 text-[14px] font-semibold tabular-nums text-label3">{s.num || "–"}</span>
                             <span className="min-w-0 flex-1">
-                              <span className="block truncate text-[16px]">{s.titre || <em className="text-label3">Untitled</em>}</span>
+                              <span className="block truncate text-[14px]">{s.titre || <em className="text-label3">Untitled</em>}</span>
                               <span className="mt-0.5 flex items-center gap-1.5 text-[12px] text-label3">
                                 <TcodeBadge tcode={s.tcode} />
                                 {nCap > 0 && (

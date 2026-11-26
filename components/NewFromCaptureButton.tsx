@@ -30,7 +30,7 @@ export function NewFromCaptureButton({
           <Icon name={busy ? "image" : "plus"} className="h-6 w-6" />
         </span>
         <span className="min-w-0 flex-1">
-          <span className="block text-[17px] font-semibold">
+          <span className="block text-[15px] font-semibold">
             {busy ? `Uploading screenshots… ${progress.done}/${progress.total}` : over ? "Drop to create the step" : "+ New step from a screenshot"}
           </span>
           <span className="block text-[13px] text-white/80">

@@ -34,7 +34,7 @@ export function AddCapturesZone({
           over ? "border-blue bg-blue/10" : "border-sep bg-card hover:border-blue/60"
         }`}
       >
-        <span className="flex items-center gap-1.5 text-[16px] font-semibold text-blue">
+        <span className="flex items-center gap-1.5 text-[14px] font-semibold text-blue">
           <Icon name="camera" className="h-5 w-5" />
           {busy ? `Uploading screenshots… ${progress.done}/${progress.total}` : over ? "Drop here" : label}
         </span>

@@ -12,7 +12,7 @@ function Row({ label, children, tone }: { label: string; children: ReactNode; to
   return (
     <div className="px-4 py-3">
       <dt className={`text-[13px] ${tone === "red" ? "text-red" : "text-label3"}`}>{label}</dt>
-      <dd className={`mt-0.5 whitespace-pre-wrap break-words text-[16px] ${tone === "red" ? "text-red" : ""}`}>{children}</dd>
+      <dd className={`mt-0.5 whitespace-pre-wrap break-words text-[14px] ${tone === "red" ? "text-red" : ""}`}>{children}</dd>
     </div>
   );
 }
@@ -87,7 +87,7 @@ export function StepDetail({
           {step.num && <span className="font-semibold tabular-nums">{step.num}</span>}
           <TcodeBadge tcode={step.tcode} />
         </div>
-        <h1 id="step-title" className="mt-1 text-[30px] font-bold leading-tight tracking-tight">
+        <h1 id="step-title" className="mt-1 text-[26px] font-bold leading-tight tracking-tight">
           {step.titre || <span className="text-label3">Untitled</span>}
         </h1>
       </header>
@@ -136,7 +136,7 @@ export function StepDetail({
         {captures.map((c, i) => (
           <figure key={c.id} className="card overflow-hidden">
             <button type="button" onClick={() => setLightbox(i)} className="block w-full bg-black/5" aria-label={`Enlarge screenshot ${i + 1}`}>
-              <CaptureImage path={c.path} alt={c.legende || `Screenshot ${i + 1}`} className="mx-auto max-h-[520px] w-full object-contain" />
+              <CaptureImage path={c.path} alt={c.legende || `Screenshot ${i + 1}`} className="mx-auto max-h-[720px] w-full object-contain" />
             </button>
             <figcaption className="px-4 py-2.5 text-[14px] text-label3">
               Screenshot {i + 1}/{captures.length}

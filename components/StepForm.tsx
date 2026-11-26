@@ -229,7 +229,7 @@ export const StepForm = forwardRef<
         <button type="button" onClick={onCancel} className="btn-plain -ml-2">
           Cancel
         </button>
-        <h1 className="truncate text-[17px] font-semibold">{init.isNew ? "New step" : "Edit step"}</h1>
+        <h1 className="truncate text-[15px] font-semibold">{init.isNew ? "New step" : "Edit step"}</h1>
         <button type="submit" disabled={saving || !!upload} className="btn-blue min-w-[110px]">
           {saving ? "Saving…" : "Save"}
         </button>

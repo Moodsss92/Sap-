@@ -67,7 +67,7 @@ export function BlockNameSheet({
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="e.g. Company codes and FI"
-            className="w-full rounded-[12px] bg-transparent px-4 py-3 text-[17px] outline-none placeholder:text-label3"
+            className="w-full rounded-[12px] bg-transparent px-4 py-3 text-[15px] outline-none placeholder:text-label3"
           />
         </div>
         {error && (

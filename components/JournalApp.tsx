@@ -572,7 +572,7 @@ export function JournalApp() {
   return (
     <div className="min-h-screen">
       <header ref={headerRef} className="glass hairline-b sticky top-0 z-30 pt-[env(safe-area-inset-top)]">
-        <div className="mx-auto max-w-[1280px] px-4">
+        <div className="mx-auto max-w-[1600px] px-6">
           <div className="flex min-h-[52px] items-center gap-x-3 py-1.5">
             <div className="mr-auto flex min-w-0 flex-1 items-center gap-2">
               <h1 className="truncate text-[20px] font-bold tracking-tight">SAP Log</h1>
@@ -612,7 +612,7 @@ export function JournalApp() {
         </div>
       </header>
 
-      <main className="mx-auto grid max-w-[1280px] grid-cols-[minmax(0,1fr)] gap-6 px-4 pt-4 split:grid-cols-[minmax(320px,400px)_minmax(0,1fr)]">
+      <main className="mx-auto grid max-w-[1600px] grid-cols-[minmax(400px,480px)_minmax(0,1fr)] gap-8 px-6 pt-5">
         <aside
           aria-label="Step list"
           className={`${showRight ? "hidden split:block" : ""} split:sticky split:top-[calc(var(--header-h,120px)+16px)] split:max-h-[calc(100vh-var(--header-h,120px)-16px)] split:overflow-y-auto split:pb-8 scroll-thin`}
@@ -696,7 +696,7 @@ export function JournalApp() {
           ) : (
             <div className="flex min-h-[50vh] flex-col items-center justify-center px-6 text-center text-label3">
               <Icon name="doc" className="mb-3 h-12 w-12 opacity-50" />
-              <p className="text-[17px] font-semibold text-label">Select a step</p>
+              <p className="text-[15px] font-semibold text-label">Select a step</p>
               <p className="mt-1 max-w-[360px] text-[15px]">
                 Or paste an SAP screenshot (Ctrl/⌘ + V) anywhere to create a new step.
               </p>
