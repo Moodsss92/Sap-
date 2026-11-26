@@ -2,7 +2,7 @@
 
 Web app partagée par l'équipe (Moad, Armel, Mazen, Thomas) pour documenter chaque étape de la configuration S/4HANA MM/SD du business case **Philo Televisions** : company codes C2NL / C2BE (copiées de 1010), plants Breda, Delft, Brussels, Antwerp, purchasing orgs P2HQ / P2BR / P2BX / P2AN, sales orgs S2NL / S2BE.
 
-L'interface est en **anglais**. Chaque étape tient en **4 champs** : titre, T-code, chemin (SPRO) et « What I did », plus les captures d'écran. Claude lit les captures et pré-remplit ces champs. L'étape est attribuée automatiquement à la personne qui la crée et numérotée 1, 2, 3… (plus de responsable ni de bloc à saisir).
+L'interface est en **anglais**. Chaque étape tient en **4 champs** : titre, T-code, chemin (SPRO) et « What I did », plus les captures d'écran. Le T-code pré-remplit le titre et le chemin (dictionnaire local). L'étape est attribuée automatiquement à la personne qui la crée et numérotée 1, 2, 3… (plus de responsable ni de bloc à saisir).
 
 ## Fonctionnalités
 
@@ -110,6 +110,8 @@ Production actuelle : https://sap-flame.vercel.app
 `/api/analyze` déclare `maxDuration = 60` s : la lecture de 5 captures prend en général 10 à 30 s. `/api/compose` déclare `maxDuration = 120` s pour relire tout le journal, ce que le plan gratuit de Vercel accepte quand Fluid Compute est activé (réglage par défaut des nouveaux projets).
 
 ## Lecture des captures par Claude
+
+> **Désactivé dans l'interface** : l'équipe n'utilise pas de clé Anthropic. Les routes `app/api/analyze` et `app/api/compose` restent dans le code ; pour les réactiver, il faut ajouter `ANTHROPIC_API_KEY` dans Vercel et remettre les appels côté client (voir l'historique Git). La documentation finale s'exporte sans texte rédigé par Claude.
 
 - Au maximum **5 images** sont envoyées par analyse. Le serveur les télécharge depuis le Storage privé, avec la session de l'utilisateur,, puis appelle l'API Anthropic avec le prompt du business case et le dictionnaire `lib/tcodes.ts`.
 - La réponse JSON est validée avec **zod**. Si le JSON est invalide, le client reçoit une erreur claire.

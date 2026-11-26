@@ -91,13 +91,13 @@ export function ExportSheet({
             className="flex min-h-[72px] w-full items-center gap-3 px-4 py-3 text-left active:bg-fill/20"
           >
             <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[11px] bg-gradient-to-br from-blue to-[#5856D6] text-white">
-              <Icon name="sparkles" className="h-6 w-6" />
+              <Icon name="doc" className="h-6 w-6" />
             </span>
             <span className="min-w-0 flex-1">
               <span className="block text-[17px] font-semibold">Final documentation (Word)</span>
               <span className="block text-[13px] leading-snug text-label3">
-                Everyone&apos;s work combined into one coherent document: Claude writes the summary, each block&apos;s
-                introduction and the points to check. Your entries stay exactly as written.
+                Everyone&apos;s work in one structured document: title page, contents, organizational structure, every
+                step with its screenshots, and appendices (issues, progress and contributions).
               </span>
             </span>
             <Icon name="chevron-right" className="h-4 w-4 shrink-0 text-label3" />

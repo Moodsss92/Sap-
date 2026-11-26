@@ -9,7 +9,7 @@ import { copyToClipboard, journalToText, stepToText } from "@/lib/exportText";
 import { imagesFromDataTransfer } from "@/lib/images";
 import { nextGlobalNum } from "@/lib/numbering";
 import { copyFiles, uploadCaptures } from "@/lib/storage";
-import { EMPTY_FIELDS, STATUT_LABEL, type ComposedDoc, type DraftCapture, type MemberName, type Statut, type Step, type StepFields } from "@/lib/types";
+import { EMPTY_FIELDS, STATUT_LABEL, type DraftCapture, type MemberName, type Statut, type Step, type StepFields } from "@/lib/types";
 import { ExportSheet, type ExportKind } from "./ExportSheet";
 import { HelpBanner } from "./HelpBanner";
 import { NewFromCaptureButton } from "./NewFromCaptureButton";
@@ -62,7 +62,6 @@ export function JournalApp() {
   const [whoOpen, setWhoOpen] = useState(false);
   const [exporting, setExporting] = useState<string | null>(null);
   const [exportOpen, setExportOpen] = useState(false);
-  const composeAbort = useRef<AbortController | null>(null);
   const [alert, setAlert] = useState<(AlertOptions & { resolve: (ok: boolean) => void }) | null>(null);
   const headerRef = useRef<HTMLElement>(null);
 
@@ -162,7 +161,6 @@ export function JournalApp() {
           fields: { ...EMPTY_FIELDS, resp: me?.name ?? "", statut: "encours" },
           drafts: paths.map((path) => ({ key: path, path, legende: "" })),
           uploaded: paths,
-          autoAnalyze: true,
         });
       } catch (e) {
         toast(e instanceof Error ? e.message : "Could not upload the screenshots.", "error", 6000);
@@ -359,37 +357,11 @@ export function JournalApp() {
   const exportFinal = async (onlyDone: boolean) => {
     const list = onlyDone ? steps.filter((st) => st.statut === "fait") : steps;
     if (!list.length) return toast(onlyDone ? "No steps marked \"Done\" yet." : "The log is empty.", "error");
-    const ctrl = new AbortController();
-    composeAbort.current = ctrl;
-    setExporting("Claude is writing…");
-    let composed: ComposedDoc | null = null;
-    try {
-      const res = await fetch("/api/compose", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ onlyDone }),
-        signal: ctrl.signal,
-      });
-      const body = (await res.json().catch(() => ({}))) as { result?: ComposedDoc; error?: string };
-      if (!res.ok || !body.result) throw new Error(body.error || `Erreur ${res.status}`);
-      composed = body.result;
-    } catch (e) {
-      composeAbort.current = null;
-      setExporting(null);
-      const stopped = ctrl.signal.aborted;
-      const ok = await confirm({
-        title: stopped ? "Writing stopped" : "Claude could not write the text",
-        message: `${stopped ? "" : (e instanceof Error ? e.message : "Unknown error") + " "}Export the document anyway, without the summary and introductions?`,
-        confirmLabel: "Export",
-      });
-      if (!ok) return;
-    }
-    composeAbort.current = null;
     setExporting("Laying out…");
     try {
       const { exportFinalDocx, downloadBlob } = await import("@/lib/exportDocx");
       const blob = await exportFinalDocx(steps, capturesByStep, {
-        composed,
+        composed: null,
         onlyDone,
         nameOf,
         onProgress: (d, t) => setExporting(t ? `Screenshots ${d}/${t}` : "Laying out…"),
@@ -486,18 +458,10 @@ export function JournalApp() {
               />
             </div>
             <div className="flex shrink-0 items-center gap-0.5">
-              {exporting && composeAbort.current ? (
-                <button type="button" onClick={() => composeAbort.current?.abort()} className="btn-plain px-2 text-[15px]">
-                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-blue border-t-transparent" aria-hidden />
-                  <span>{exporting}</span>
-                  <span className="text-red">Stop</span>
-                </button>
-              ) : (
                 <button type="button" onClick={() => setExportOpen(true)} disabled={!!exporting} aria-label="Export" className="btn-plain px-2 text-[15px]">
                   <Icon name="doc" className="h-[18px] w-[18px]" />
                   <span className={exporting ? "" : "hidden sm:inline"}>{exporting ?? "Export"}</span>
                 </button>
-              )}
               <button type="button" onClick={copyJournal} aria-label="Copy as text" className="btn-plain px-2 text-[15px]">
                 <Icon name="copy" className="h-[18px] w-[18px]" />
                 <span className="hidden sm:inline">Copy as text</span>

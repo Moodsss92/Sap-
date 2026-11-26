@@ -13,7 +13,6 @@ import {
 import { removeFiles, uploadCaptures } from "@/lib/storage";
 import { lookupTcode, normalizeTcode } from "@/lib/tcodes";
 import {
-  type AnalyzeResult,
   type DraftCapture,
   type Step,
   type StepFields,
@@ -28,7 +27,6 @@ export interface FormInit {
   isNew: boolean;
   fields: StepFields;
   drafts: DraftCapture[];
-  autoAnalyze?: boolean;
   /** Fichiers déjà envoyés pour ce brouillon (à nettoyer si on annule). */
   uploaded?: string[];
 }
@@ -38,9 +36,6 @@ export interface StepFormHandle {
   discard: () => Promise<void>;
 }
 
-type AiField = keyof AnalyzeResult;
-const AI_FIELDS: AiField[] = ["tcode", "titre", "chemin", "action"];
-const MAX_ANALYZE = 5;
 
 function snapshot(fields: StepFields, drafts: DraftCapture[]) {
   return JSON.stringify([fields, drafts.map((d) => [d.id ?? "", d.path, d.legende])]);
@@ -80,11 +75,9 @@ export const StepForm = forwardRef<
   const [suggested, setSuggested] = useState<Set<keyof StepFields>>(new Set());
   const [saving, setSaving] = useState(false);
   const [upload, setUpload] = useState<{ done: number; total: number } | null>(null);
-  const [analysis, setAnalysis] = useState<{ state: "idle" | "running" | "done" | "error"; message?: string }>({ state: "idle" });
 
   const initial = useRef(snapshot(init.fields, init.drafts));
   const uploaded = useRef<string[]>(init.uploaded ?? []);
-  const abort = useRef<AbortController | null>(null);
   const fieldsRef = useRef(fields);
   fieldsRef.current = fields;
   const draftsRef = useRef(drafts);
@@ -139,86 +132,6 @@ export const StepForm = forwardRef<
     if (filled.length) setSuggested((s) => new Set([...Array.from(s), ...filled]));
   }
 
-  // ---------- Lecture des captures par Claude ----------
-  const analyze = useCallback(async () => {
-    const paths = draftsRef.current.map((d) => d.path).slice(0, MAX_ANALYZE);
-    if (!paths.length) {
-      setAnalysis({ state: "error", message: "Add at least one screenshot to analyze." });
-      return;
-    }
-    abort.current?.abort();
-    const ctrl = new AbortController();
-    abort.current = ctrl;
-    setAnalysis({ state: "running" });
-    try {
-      const res = await fetch("/api/analyze", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ paths }),
-        signal: ctrl.signal,
-      });
-      const body = (await res.json().catch(() => ({}))) as { result?: AnalyzeResult; error?: string };
-      if (!res.ok || !body.result) throw new Error(body.error || `Erreur ${res.status}`);
-      const r = body.result;
-
-      // On ne remplit QUE les champs vides
-      const cur = fieldsRef.current;
-      const next: StepFields = { ...cur };
-      const filled: (keyof StepFields)[] = [];
-      for (const k of AI_FIELDS) {
-        const v = k === "tcode" ? normalizeTcode(r.tcode) : r[k];
-        if (v && !cur[k].trim()) {
-          next[k] = v;
-          filled.push(k);
-        }
-      }
-      // Complément par le dictionnaire si Claude a trouvé le T-code mais pas le chemin
-      const entry = lookupTcode(next.tcode);
-      if (entry) {
-        if (!next.chemin.trim()) {
-          next.chemin = entry[0];
-          filled.push("chemin");
-        }
-        if (!next.titre.trim()) {
-          next.titre = entry[1];
-          filled.push("titre");
-        }
-      }
-      setFields(next);
-      setSuggested((s) => new Set([...Array.from(s), ...filled]));
-      const n = new Set(filled).size;
-      const more = draftsRef.current.length > MAX_ANALYZE ? ` (first ${MAX_ANALYZE} screenshots read)` : "";
-      setAnalysis({
-        state: "done",
-        message:
-          n > 0
-            ? `Claude filled ${n} field${n > 1 ? "s" : ""}. Review it and complete "What I did".${more}`
-            : `Claude found nothing to add: the fields were already filled or unreadable.${more}`,
-      });
-    } catch (e) {
-      if (ctrl.signal.aborted) {
-        setAnalysis({ state: "idle", message: "Analysis stopped. You can fill in the entry by hand." });
-      } else {
-        setAnalysis({
-          state: "error",
-          message: `${e instanceof Error ? e.message : "Analysis failed."} You can still fill it in by hand.`,
-        });
-      }
-    } finally {
-      if (abort.current === ctrl) abort.current = null;
-    }
-  }, []);
-
-  const autoRan = useRef(false);
-  useEffect(() => {
-    if (init.autoAnalyze && !autoRan.current) {
-      autoRan.current = true;
-      analyze();
-    }
-    return () => abort.current?.abort();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   // ---------- Captures ----------
   const addFiles = useCallback(
     async (files: File[]) => {
@@ -247,7 +160,6 @@ export const StepForm = forwardRef<
     });
 
   const discard = useCallback(async () => {
-    abort.current?.abort();
     const paths = uploaded.current;
     uploaded.current = [];
     await removeFiles(paths);
@@ -298,7 +210,6 @@ export const StepForm = forwardRef<
     return () => window.removeEventListener("keydown", onKey);
   }, [save, onCancel]);
 
-  const running = analysis.state === "running";
 
   return (
     <form
@@ -320,46 +231,6 @@ export const StepForm = forwardRef<
         </button>
       </div>
 
-      {/* Lecture par Claude */}
-      <div className="card mb-4 p-3" aria-live="polite">
-        <div className="flex flex-wrap items-center gap-2">
-          {running ? (
-            <>
-              <span className="flex flex-1 items-center gap-2 text-[15px]">
-                <span className="h-4 w-4 animate-spin rounded-full border-2 border-blue border-t-transparent" aria-hidden />
-                Claude is reading {Math.min(drafts.length, MAX_ANALYZE)} screenshot{drafts.length > 1 ? "s" : ""}…
-              </span>
-              <button type="button" onClick={() => abort.current?.abort()} className="btn-danger min-h-[36px] px-3 text-[15px]">
-                <Icon name="stop" className="h-4 w-4" /> Stop
-              </button>
-            </>
-          ) : (
-            <>
-              <span className="flex flex-1 items-center gap-2 text-[15px] text-label3">
-                <Icon name="sparkles" className="h-5 w-5 text-blue" />
-                Claude only fills empty fields.
-              </span>
-              <button
-                type="button"
-                onClick={analyze}
-                disabled={!drafts.length || !!upload}
-                className="btn-tinted min-h-[36px] px-3 text-[15px]"
-              >
-                Fill from screenshots
-              </button>
-            </>
-          )}
-        </div>
-        {analysis.message && (
-          <p
-            role={analysis.state === "error" ? "alert" : undefined}
-            className={`mt-2 text-[14px] ${analysis.state === "error" ? "text-red" : analysis.state === "done" ? "text-green" : "text-label3"}`}
-          >
-            {analysis.message}
-          </p>
-        )}
-      </div>
-
       {/* Les 4 champs à remplir */}
       <div className="card inset-list mb-4 overflow-hidden">
         <Field label="Title" htmlFor="f-titre" hint={<SuggestHint show={suggested.has("titre")} />}>
@@ -369,7 +240,7 @@ export const StepForm = forwardRef<
             value={fields.titre}
             onChange={(e) => set("titre", e.target.value)}
             placeholder="e.g. Assign plant to company code"
-            autoFocus={!init.autoAnalyze}
+            autoFocus
           />
         </Field>
         <Field label="T-code" htmlFor="f-tcode" hint={<SuggestHint show={suggested.has("tcode")} />}>
