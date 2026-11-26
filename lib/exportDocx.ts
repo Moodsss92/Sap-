@@ -69,7 +69,7 @@ function field(label: string, value: string, opts: { color?: string; font?: stri
   return [
     new Paragraph({
       spacing: { after: 80 },
-      children: [new TextRun({ text: `${label} : `, bold: true }), ...multiline(value, opts)],
+      children: [new TextRun({ text: `${label}: `, bold: true }), ...multiline(value, opts)],
     }),
   ];
 }
@@ -111,7 +111,7 @@ function progressBar(done: number, total: number, width = 20): string {
 
 function blocTable(s: TeamSummary): Table {
   return table(
-    ["Bloc", "Étapes", "Faites", "En cours", "Problème", "À faire", "Contributeurs"],
+    ["Block", "Steps", "Done", "In progress", "Issue", "To do", "Contributors"],
     s.blocs.map((b) => ({
       cells: [
         b.bloc,
@@ -129,7 +129,7 @@ function blocTable(s: TeamSummary): Table {
 
 function memberTable(s: TeamSummary): Table {
   return table(
-    ["Membre", "Étapes", "Faites", "Captures"],
+    ["Member", "Steps", "Done", "Screenshots"],
     s.members.map((m) => ({ cells: [m.name, String(m.total), String(m.fait), String(m.captures)] })),
   );
 }
@@ -137,38 +137,38 @@ function memberTable(s: TeamSummary): Table {
 function teamSummaryBlocks(steps: Step[], capturesByStep: Map<string, Capture[]>): Block[] {
   const s = buildTeamSummary(steps, capturesByStep);
   const out: Block[] = [
-    new Paragraph({ heading: HeadingLevel.HEADING_1, children: [new TextRun("Assemblage de l'équipe")] }),
+    new Paragraph({ heading: HeadingLevel.HEADING_1, children: [new TextRun("How the team's work fits together")] }),
     new Paragraph({
       spacing: { after: 120 },
       children: [
-        new TextRun({ text: `${s.fait}/${s.total} étapes faites (${s.pct} %)  `, bold: true, size: 28 }),
+        new TextRun({ text: `${s.fait}/${s.total} steps done (${s.pct}%)  `, bold: true, size: 28 }),
         new TextRun({ text: progressBar(s.fait, s.total), color: "34C759", size: 28 }),
       ],
     }),
-    new Paragraph({ heading: HeadingLevel.HEADING_2, children: [new TextRun("Avancement par bloc")] }),
+    new Paragraph({ heading: HeadingLevel.HEADING_2, children: [new TextRun("Progress by block")] }),
     blocTable(s),
-    new Paragraph({ heading: HeadingLevel.HEADING_2, children: [new TextRun("Contribution de chacun")] }),
+    new Paragraph({ heading: HeadingLevel.HEADING_2, children: [new TextRun("Contribution by member")] }),
     memberTable(s),
-    new Paragraph({ heading: HeadingLevel.HEADING_2, children: [new TextRun("Pièces manquantes")] }),
+    new Paragraph({ heading: HeadingLevel.HEADING_2, children: [new TextRun("Missing pieces")] }),
   ];
 
   if (!s.emptyBlocs.length && !s.openSteps.length) {
-    out.push(new Paragraph({ children: [new TextRun({ text: "Rien ne manque : toutes les étapes sont faites. 🎉", color: "34C759" })] }));
+    out.push(new Paragraph({ children: [new TextRun({ text: "Nothing missing: every step is done. 🎉", color: "34C759" })] }));
   }
   if (s.emptyBlocs.length) {
-    out.push(new Paragraph({ children: [new TextRun({ text: "Blocs sans aucune étape :", bold: true })] }));
+    out.push(new Paragraph({ children: [new TextRun({ text: "Blocks with no steps:", bold: true })] }));
     s.emptyBlocs.forEach((b) => out.push(new Paragraph({ bullet: { level: 0 }, children: [new TextRun(b)] })));
   }
   if (s.openSteps.length) {
-    out.push(new Paragraph({ spacing: { before: 120 }, children: [new TextRun({ text: "Étapes à terminer :", bold: true })] }));
+    out.push(new Paragraph({ spacing: { before: 120 }, children: [new TextRun({ text: "Steps to finish:", bold: true })] }));
     s.openSteps.forEach((st) =>
       out.push(
         new Paragraph({
           bullet: { level: 0 },
           children: [
-            new TextRun(`${st.num ? st.num + " · " : ""}${st.titre || "(sans titre)"}`),
+            new TextRun(`${st.num ? st.num + " · " : ""}${st.titre || "(untitled)"}`),
             new TextRun({ text: `  ${STATUT_LABEL[st.statut]}`, color: STATUT_COLOR[st.statut], bold: true }),
-            new TextRun({ text: st.resp ? ` · ${st.resp}` : " · non attribuée", color: GREY }),
+            new TextRun({ text: st.resp ? ` · ${st.resp}` : " · unassigned", color: GREY }),
           ],
         }),
       ),
@@ -194,9 +194,9 @@ function attribution(s: Step, nameOf?: DocxOptions["nameOf"]): Paragraph {
   const author = nameOf?.(s.author_id);
   const updater = nameOf?.(s.updated_by);
   const parts = [
-    `Responsable : ${s.resp || "non attribuée"}`,
-    author && `rédigée par ${author}`,
-    updater && updater !== author && `complétée par ${updater}`,
+    `Owner: ${s.resp || "unassigned"}`,
+    author && `written by ${author}`,
+    updater && updater !== author && `completed by ${updater}`,
   ].filter(Boolean);
   return new Paragraph({
     spacing: { after: 120 },
@@ -216,18 +216,18 @@ async function stepBlocks(
   const out: Block[] = [
     new Paragraph({
       heading: opts.heading ?? HeadingLevel.HEADING_2,
-      children: [new TextRun(`${s.num ? s.num + " · " : ""}${s.titre || "(sans titre)"}`)],
+      children: [new TextRun(`${s.num ? s.num + " · " : ""}${s.titre || "(untitled)"}`)],
     }),
   ];
   if (opts.signed) out.push(attribution(s, opts.nameOf));
-  else out.push(...field("Responsable", s.resp), ...field("Statut", STATUT_LABEL[s.statut]));
+  else out.push(...field("Owner", s.resp), ...field("Status", STATUT_LABEL[s.statut]));
   out.push(
     ...field("Transaction", s.tcode),
-    ...field("Chemin", s.chemin, { font: "Consolas", color: "007AFF" }),
-    ...field("Ce qu'on fait", s.action),
-    ...field("Valeurs", s.valeurs),
-    ...field("Contrôle", s.controle),
-    ...field("Problème / solution", s.remarque, { color: "FF3B30" }),
+    ...field("Path", s.chemin, { font: "Consolas", color: "007AFF" }),
+    ...field("What we did", s.action),
+    ...field("Values", s.valeurs),
+    ...field("Check", s.controle),
+    ...field("Issue / solution", s.remarque, { color: "FF3B30" }),
   );
 
   for (let i = 0; i < caps.length; i++) {
@@ -250,20 +250,20 @@ async function stepBlocks(
               type: img.type,
               data: img.data,
               transformation: { width: img.width, height: img.height },
-              altText: { name: `Capture ${i + 1}`, description: c.legende || `Capture ${i + 1}`, title: `Capture ${i + 1}` },
+              altText: { name: `Screenshot ${i + 1}`, description: c.legende || `Screenshot ${i + 1}`, title: `Screenshot ${i + 1}` },
             }),
           ],
         }),
       );
     } else {
-      out.push(new Paragraph({ children: [new TextRun({ text: "[capture indisponible]", italics: true, color: "8E8E93" })] }));
+      out.push(new Paragraph({ children: [new TextRun({ text: "[screenshot unavailable]", italics: true, color: "8E8E93" })] }));
     }
     out.push(
       new Paragraph({
         alignment: AlignmentType.CENTER,
         spacing: { after: 200 },
         children: [
-          new TextRun({ text: `Capture ${i + 1}/${caps.length}${c.legende ? " · " + c.legende : ""}`, italics: true, size: 18, color: GREY }),
+          new TextRun({ text: `Screenshot ${i + 1}/${caps.length}${c.legende ? " · " + c.legende : ""}`, italics: true, size: 18, color: GREY }),
         ],
       }),
     );
@@ -284,7 +284,7 @@ function countCaptures(steps: Step[], capturesByStep: Map<string, Capture[]>): n
 
 function makeDoc(title: string, children: Block[]): Promise<Blob> {
   const doc = new Document({
-    creator: "Journal SAP · Philo Televisions",
+    creator: "SAP Log · Philo Televisions",
     title,
     styles: { default: { document: { run: { font: "Calibri", size: 22 } } } },
     sections: [{ children }],
@@ -377,8 +377,8 @@ export async function exportFinalDocx(
   opts: FinalDocOptions,
 ): Promise<Blob> {
   const steps = opts.onlyDone ? allSteps.filter((s) => s.statut === "fait") : allSteps;
-  const title = "Documentation de configuration SAP S/4HANA";
-  const date = new Date().toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
+  const title = "SAP S/4HANA Configuration Documentation";
+  const date = new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
   const summary = buildTeamSummary(allSteps, capturesByStep);
 
   // Regroupement par bloc
@@ -401,14 +401,14 @@ export async function exportFinalDocx(
     new Paragraph({
       alignment: AlignmentType.CENTER,
       spacing: { after: 400 },
-      children: [new TextRun({ text: `Business case ${BUSINESS_CASE.name} · modules MM et SD`, size: 32, color: "007AFF" })],
+      children: [new TextRun({ text: `Business case ${BUSINESS_CASE.name} · MM and SD modules`, size: 32, color: "007AFF" })],
     }),
-    new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: `Équipe : ${BUSINESS_CASE.team.join(", ")}`, size: 24 })] }),
+    new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: `Team: ${BUSINESS_CASE.team.join(", ")}`, size: 24 })] }),
     new Paragraph({
       alignment: AlignmentType.CENTER,
       children: [
         new TextRun({
-          text: `${steps.length} étape${steps.length > 1 ? "s" : ""} documentée${steps.length > 1 ? "s" : ""}${opts.onlyDone ? " (étapes terminées)" : ""} · version du ${date}`,
+          text: `${steps.length} step${steps.length > 1 ? "s" : ""} documented${opts.onlyDone ? " (completed steps)" : ""} · version of ${date}`,
           color: GREY,
         }),
       ],
@@ -418,12 +418,12 @@ export async function exportFinalDocx(
   // Sommaire
   let chap = 1;
   const toc: string[] = [];
-  if (opts.composed?.synthese) toc.push(`${chap++}. Synthèse`);
-  toc.push(`${chap++}. Structure organisationnelle`);
+  if (opts.composed?.synthese) toc.push(`${chap++}. Summary`);
+  toc.push(`${chap++}. Organizational structure`);
   const firstBlocChap = chap;
   groups.forEach((g) => toc.push(`${chap++}. ${g.bloc.replace(/^\d+\s*·\s*/, "")}`));
-  toc.push("Annexes");
-  children.push(H1("Sommaire"));
+  toc.push("Appendices");
+  children.push(H1("Contents"));
   toc.forEach((t, i) => {
     children.push(new Paragraph({ spacing: { after: 60 }, children: [new TextRun({ text: t, bold: true })] }));
     const g = groups[i - (firstBlocChap - 1)];
@@ -433,7 +433,7 @@ export async function exportFinalDocx(
           new Paragraph({
             indent: { left: 400 },
             spacing: { after: 20 },
-            children: [new TextRun({ text: `${s.num ? s.num + " · " : ""}${s.titre || "(sans titre)"}`, color: GREY, size: 20 })],
+            children: [new TextRun({ text: `${s.num ? s.num + " · " : ""}${s.titre || "(untitled)"}`, color: GREY, size: 20 })],
           }),
         ),
       );
@@ -443,18 +443,18 @@ export async function exportFinalDocx(
   // Synthèse
   chap = 1;
   if (opts.composed?.synthese) {
-    children.push(H1(`${chap++}. Synthèse`), ...paragraphs(opts.composed.synthese));
+    children.push(H1(`${chap++}. Summary`), ...paragraphs(opts.composed.synthese));
   }
 
   // Structure organisationnelle
   children.push(
-    H1(`${chap++}. Structure organisationnelle`, !opts.composed?.synthese),
+    H1(`${chap++}. Organizational structure`, !opts.composed?.synthese),
     new Paragraph({
       spacing: { after: 160 },
-      children: [new TextRun(`Unités organisationnelles configurées pour ${BUSINESS_CASE.name}.`)],
+      children: [new TextRun(`Organizational units configured for ${BUSINESS_CASE.name}.`)],
     }),
     table(
-      ["Unité", "Valeurs", "Remarque"],
+      ["Unit", "Values", "Note"],
       BUSINESS_CASE.orgUnits.map((u) => ({ cells: [u.type, u.values, u.note || "—"] })),
     ),
   );
@@ -472,27 +472,27 @@ export async function exportFinalDocx(
   }
 
   // Annexes
-  children.push(H1("Annexes"));
+  children.push(H1("Appendices"));
   const problems = steps.filter((s) => s.remarque.trim());
-  children.push(H2("A. Problèmes rencontrés et solutions"));
+  children.push(H2("A. Issues encountered and solutions"));
   if (problems.length) {
     problems.forEach((s) =>
       children.push(
         new Paragraph({
           spacing: { after: 120 },
           children: [
-            new TextRun({ text: `${s.num ? s.num + " · " : ""}${s.titre || "(sans titre)"}${s.tcode ? ` (${s.tcode})` : ""} : `, bold: true }),
+            new TextRun({ text: `${s.num ? s.num + " · " : ""}${s.titre || "(untitled)"}${s.tcode ? ` (${s.tcode})` : ""}: `, bold: true }),
             ...multiline(s.remarque, { color: "FF3B30" }),
           ],
         }),
       ),
     );
   } else {
-    children.push(new Paragraph({ children: [new TextRun({ text: "Aucun problème signalé.", color: GREY })] }));
+    children.push(new Paragraph({ children: [new TextRun({ text: "No issues reported.", color: GREY })] }));
   }
 
   if (opts.composed) {
-    children.push(H2("B. Points à vérifier avant la remise"));
+    children.push(H2("B. Points to check before submission"));
     if (opts.composed.aVerifier.length) {
       opts.composed.aVerifier.forEach((p) =>
         children.push(
@@ -503,24 +503,24 @@ export async function exportFinalDocx(
         ),
       );
     } else {
-      children.push(new Paragraph({ children: [new TextRun({ text: "Aucune incohérence relevée.", color: GREY })] }));
+      children.push(new Paragraph({ children: [new TextRun({ text: "No inconsistencies found.", color: GREY })] }));
     }
   }
 
-  children.push(H2(`${opts.composed ? "C" : "B"}. Avancement et contributions`), blocTable(summary));
+  children.push(H2(`${opts.composed ? "C" : "B"}. Progress and contributions`), blocTable(summary));
   children.push(new Paragraph({ spacing: { before: 200 }, children: [] }), memberTable(summary));
   if (opts.onlyDone) {
     const excluded = allSteps.filter((s) => s.statut !== "fait");
     if (excluded.length) {
       children.push(
-        new Paragraph({ spacing: { before: 200 }, children: [new TextRun({ text: "Étapes non incluses (pas encore faites) :", bold: true })] }),
+        new Paragraph({ spacing: { before: 200 }, children: [new TextRun({ text: "Steps not included (not done yet):", bold: true })] }),
       );
       excluded.forEach((s) =>
         children.push(
           new Paragraph({
             bullet: { level: 0 },
             children: [
-              new TextRun(`${s.num ? s.num + " · " : ""}${s.titre || "(sans titre)"}`),
+              new TextRun(`${s.num ? s.num + " · " : ""}${s.titre || "(untitled)"}`),
               new TextRun({ text: `  ${STATUT_LABEL[s.statut]}`, bold: true, color: STATUT_COLOR[s.statut] }),
               new TextRun({ text: s.resp ? ` · ${s.resp}` : "", color: GREY }),
             ],

@@ -122,9 +122,9 @@ export function JournalApp() {
     if (!form) return true;
     if (dirty) {
       const ok = await confirm({
-        title: "Quitter sans enregistrer ?",
-        message: "Tes modifications et les captures ajoutées seront perdues.",
-        confirmLabel: "Quitter",
+        title: "Leave without saving?",
+        message: "Your changes and any screenshots you added will be lost.",
+        confirmLabel: "Leave",
         destructive: true,
       });
       if (!ok) return false;
@@ -170,7 +170,7 @@ export function JournalApp() {
           numAuto: true,
         });
       } catch (e) {
-        toast(e instanceof Error ? e.message : "Envoi des captures impossible.", "error", 6000);
+        toast(e instanceof Error ? e.message : "Could not upload the screenshots.", "error", 6000);
       } finally {
         setNewUpload(null);
       }
@@ -184,9 +184,9 @@ export function JournalApp() {
       try {
         const paths = await uploadCaptures(selected.id, files, (done, total) => setDetailUpload({ done, total }));
         await journal.appendCaptures(selected.id, paths);
-        toast(`${paths.length} capture${paths.length > 1 ? "s" : ""} ajoutée${paths.length > 1 ? "s" : ""}`, "success");
+        toast(`${paths.length} screenshot${paths.length > 1 ? "s" : ""} added`, "success");
       } catch (e) {
-        toast(e instanceof Error ? e.message : "Ajout impossible.", "error", 6000);
+        toast(e instanceof Error ? e.message : "Could not add.", "error", 6000);
       } finally {
         setDetailUpload(null);
       }
@@ -241,7 +241,7 @@ export function JournalApp() {
       setForm(null);
       setDirty(false);
       setSelectedId(id);
-      toast(isNew ? "Étape créée" : "Modifications enregistrées", "success");
+      toast(isNew ? "Step created" : "Changes saved", "success");
     },
     [journal, toast],
   );
@@ -267,12 +267,12 @@ export function JournalApp() {
       uploaded = await copyFiles(caps.map((c) => c.path), id);
       drafts = uploaded.map((path, i) => ({ key: path, path, legende: caps[i].legende }));
     } catch {
-      toast("Les captures n'ont pas pu être copiées.", "error");
+      toast("The screenshots could not be copied.", "error");
     }
     openForm({
       id,
       isNew: true,
-      fields: { ...stepFields(s), num: s.bloc ? nextNum(steps, s.bloc) : "", titre: s.titre ? `${s.titre} (copie)` : "", statut: "afaire" },
+      fields: { ...stepFields(s), num: s.bloc ? nextNum(steps, s.bloc) : "", titre: s.titre ? `${s.titre} (copy)` : "", statut: "afaire" },
       drafts,
       uploaded,
       numAuto: true,
@@ -290,9 +290,9 @@ export function JournalApp() {
 
   const remove = async (s: Step) => {
     const ok = await confirm({
-      title: `Supprimer « ${s.num ? s.num + " " : ""}${s.titre || "cette étape"} » ?`,
-      message: "La fiche et ses captures seront supprimées pour toute l'équipe.",
-      confirmLabel: "Supprimer",
+      title: `Delete "${s.num ? s.num + " " : ""}${s.titre || "this step"}"?`,
+      message: "The entry and its screenshots will be deleted for the whole team.",
+      confirmLabel: "Delete",
       destructive: true,
     });
     if (!ok) return;
@@ -301,9 +301,9 @@ export function JournalApp() {
     try {
       await journal.deleteStep(s.id);
       setSelectedId(neighbour?.id ?? null);
-      toast("Étape supprimée");
+      toast("Step deleted");
     } catch (e) {
-      toast(e instanceof Error ? e.message : "Suppression impossible.", "error");
+      toast(e instanceof Error ? e.message : "Could not delete.", "error");
     }
   };
 
@@ -311,51 +311,51 @@ export function JournalApp() {
     try {
       await journal.updateStatut(s.id, statut);
     } catch (e) {
-      toast(e instanceof Error ? e.message : "Mise à jour impossible.", "error");
+      toast(e instanceof Error ? e.message : "Could not update.", "error");
     }
   };
 
   // ---------- Exports ----------
-  const scopeLabel = tab === "all" ? "Tout le journal" : `Espace de ${tab}`;
+  const scopeLabel = tab === "all" ? "Whole log" : `${tab}'s space`;
 
   const today = () => new Date().toISOString().slice(0, 10);
 
   const exportWord = async (team: boolean) => {
     const list = team ? steps : visible;
-    if (!list.length) return toast("Aucune étape à exporter.", "error");
-    setExporting("Préparation…");
+    if (!list.length) return toast("No steps to export.", "error");
+    setExporting("Preparing…");
     try {
       const { exportJournalDocx, downloadBlob } = await import("@/lib/exportDocx");
       const blob = await exportJournalDocx(list, capturesByStep, {
-        title: team ? "Dossier de configuration SAP · Philo Televisions" : "Journal de configuration SAP · Philo Televisions",
-        subtitle: `${team ? "Équipe Moad, Armel, Mazen, Thomas" : scopeLabel} · ${list.length} étape${list.length > 1 ? "s" : ""} · exporté le ${new Date().toLocaleDateString("fr-FR")}`,
+        title: team ? "SAP configuration file · Philo Televisions" : "SAP configuration log · Philo Televisions",
+        subtitle: `${team ? "Team: Moad, Armel, Mazen, Thomas" : scopeLabel} · ${list.length} step${list.length > 1 ? "s" : ""} · exported on ${new Date().toLocaleDateString("en-GB")}`,
         team,
         nameOf,
-        onProgress: (d, t) => setExporting(t ? `Captures ${d}/${t}` : "Génération…"),
+        onProgress: (d, t) => setExporting(t ? `Screenshots ${d}/${t}` : "Generating…"),
       });
-      const suffix = team ? "dossier-equipe" : tab === "all" ? "journal" : tab.toLowerCase();
+      const suffix = team ? "team-file" : tab === "all" ? "log" : tab.toLowerCase();
       downloadBlob(blob, `sap-philo-${suffix}-${today()}.docx`);
-      toast(team ? "Dossier d'équipe exporté" : "Document Word exporté", "success");
+      toast(team ? "Team file exported" : "Word document exported", "success");
     } catch (e) {
-      toast(e instanceof Error ? `Export impossible : ${e.message}` : "Export impossible.", "error", 6000);
+      toast(e instanceof Error ? `Export failed: ${e.message}` : "Export failed.", "error", 6000);
     } finally {
       setExporting(null);
     }
   };
 
   const exportZip = async () => {
-    if (!steps.length) return toast("Aucune étape à exporter.", "error");
-    setExporting("Préparation…");
+    if (!steps.length) return toast("No steps to export.", "error");
+    setExporting("Preparing…");
     try {
       const [{ exportCapturesZip }, { downloadBlob }] = await Promise.all([import("@/lib/exportZip"), import("@/lib/exportDocx")]);
       const { blob, missing } = await exportCapturesZip(steps, capturesByStep, {
-        title: "Captures de configuration SAP · Philo Televisions",
-        onProgress: (d, t) => setExporting(t ? `Captures ${d}/${t}` : "Compression…"),
+        title: "SAP configuration screenshots · Philo Televisions",
+        onProgress: (d, t) => setExporting(t ? `Screenshots ${d}/${t}` : "Compressing…"),
       });
-      downloadBlob(blob, `sap-philo-captures-equipe-${today()}.zip`);
-      toast(missing ? `ZIP exporté (${missing} capture${missing > 1 ? "s" : ""} introuvable${missing > 1 ? "s" : ""})` : "Captures exportées en ZIP", missing ? "error" : "success", 5000);
+      downloadBlob(blob, `sap-philo-team-screenshots-${today()}.zip`);
+      toast(missing ? `ZIP exported (${missing} screenshot${missing > 1 ? "s" : ""} not found)` : "Screenshots exported as ZIP", missing ? "error" : "success", 5000);
     } catch (e) {
-      toast(e instanceof Error ? `Export impossible : ${e.message}` : "Export impossible.", "error", 6000);
+      toast(e instanceof Error ? `Export failed: ${e.message}` : "Export failed.", "error", 6000);
     } finally {
       setExporting(null);
     }
@@ -363,10 +363,10 @@ export function JournalApp() {
 
   const exportFinal = async (onlyDone: boolean) => {
     const list = onlyDone ? steps.filter((st) => st.statut === "fait") : steps;
-    if (!list.length) return toast(onlyDone ? "Aucune étape au statut « Fait » pour l'instant." : "Le journal est vide.", "error");
+    if (!list.length) return toast(onlyDone ? "No steps marked \"Done\" yet." : "The log is empty.", "error");
     const ctrl = new AbortController();
     composeAbort.current = ctrl;
-    setExporting("Claude rédige…");
+    setExporting("Claude is writing…");
     let composed: ComposedDoc | null = null;
     try {
       const res = await fetch("/api/compose", {
@@ -383,26 +383,26 @@ export function JournalApp() {
       setExporting(null);
       const stopped = ctrl.signal.aborted;
       const ok = await confirm({
-        title: stopped ? "Rédaction arrêtée" : "Claude n'a pas pu rédiger",
-        message: `${stopped ? "" : (e instanceof Error ? e.message : "Erreur inconnue") + " "}Exporter quand même le document, sans synthèse ni introductions ?`,
-        confirmLabel: "Exporter",
+        title: stopped ? "Writing stopped" : "Claude could not write the text",
+        message: `${stopped ? "" : (e instanceof Error ? e.message : "Unknown error") + " "}Export the document anyway, without the summary and introductions?`,
+        confirmLabel: "Export",
       });
       if (!ok) return;
     }
     composeAbort.current = null;
-    setExporting("Mise en page…");
+    setExporting("Laying out…");
     try {
       const { exportFinalDocx, downloadBlob } = await import("@/lib/exportDocx");
       const blob = await exportFinalDocx(steps, capturesByStep, {
         composed,
         onlyDone,
         nameOf,
-        onProgress: (d, t) => setExporting(t ? `Captures ${d}/${t}` : "Mise en page…"),
+        onProgress: (d, t) => setExporting(t ? `Screenshots ${d}/${t}` : "Laying out…"),
       });
-      downloadBlob(blob, `documentation-sap-philo${onlyDone ? "-etapes-faites" : ""}-${today()}.docx`);
-      toast("Documentation finale exportée", "success");
+      downloadBlob(blob, `sap-philo-documentation${onlyDone ? "-completed-steps" : ""}-${today()}.docx`);
+      toast("Final documentation exported", "success");
     } catch (e) {
-      toast(e instanceof Error ? `Export impossible : ${e.message}` : "Export impossible.", "error", 6000);
+      toast(e instanceof Error ? `Export failed: ${e.message}` : "Export failed.", "error", 6000);
     } finally {
       setExporting(null);
     }
@@ -418,19 +418,19 @@ export function JournalApp() {
   };
 
   const copyJournal = async () => {
-    if (!visible.length) return toast("Aucune étape à copier.", "error");
+    if (!visible.length) return toast("No steps to copy.", "error");
     try {
-      await copyToClipboard(journalToText(visible, capturesByStep, `Journal SAP · Philo Televisions · ${scopeLabel}`));
-      toast(`${visible.length} étape${visible.length > 1 ? "s" : ""} copiée${visible.length > 1 ? "s" : ""}`, "success");
+      await copyToClipboard(journalToText(visible, capturesByStep, `SAP log · Philo Televisions · ${scopeLabel}`));
+      toast(`${visible.length} step${visible.length > 1 ? "s" : ""} copied`, "success");
     } catch {
-      toast("Copie impossible : autorise l'accès au presse-papiers.", "error");
+      toast("Copy failed: allow clipboard access.", "error");
     }
   };
 
   // ---------- Rendu ----------
   if (sessionLoading || (user && !membersLoaded)) {
     return (
-      <div className="flex min-h-screen items-center justify-center" aria-label="Chargement">
+      <div className="flex min-h-screen items-center justify-center" aria-label="Loading">
         <span className="h-6 w-6 animate-spin rounded-full border-2 border-blue border-t-transparent" />
       </div>
     );
@@ -440,27 +440,27 @@ export function JournalApp() {
     return (
       <main className="flex min-h-screen items-center justify-center px-4 py-10">
         <div className="card w-full max-w-[520px] p-6">
-          <h1 className="text-[22px] font-bold">Accès impossible pour l&apos;instant</h1>
+          <h1 className="text-[22px] font-bold">Can&apos;t get in right now</h1>
           {sessionError && /anonymous/i.test(sessionError) ? (
             <>
               <p className="mt-2 text-[15px] text-label3">
-                L&apos;accès direct (sans e-mail) n&apos;est pas encore activé dans Supabase.
+                Direct access (no email) is not enabled in Supabase yet.
               </p>
               <ol className="mt-3 list-decimal space-y-1 pl-5 text-[15px]">
                 <li>Supabase › Authentication › Sign In / Providers.</li>
                 <li>
-                  Active <strong>Allow anonymous sign-ins</strong> et enregistre.
+                  Turn on <strong>Allow anonymous sign-ins</strong> and save.
                 </li>
-                <li>Recharge cette page.</li>
+                <li>Reload this page.</li>
               </ol>
             </>
           ) : (
             <p className="mt-2 text-[15px] text-label3">
-              Impossible de joindre la base de données{sessionError ? ` (${sessionError})` : ""}. Recharge la page dans un instant.
+              Could not reach the database{sessionError ? ` (${sessionError})` : ""}. Reload the page in a moment.
             </p>
           )}
           <button type="button" className="btn-blue mt-5 w-full" onClick={() => window.location.reload()}>
-            Recharger
+            Reload
           </button>
         </div>
       </main>
@@ -486,8 +486,8 @@ export function JournalApp() {
               <h1 className="truncate text-[20px] font-bold tracking-tight">Journal SAP</h1>
               <span
                 className={`h-2 w-2 shrink-0 rounded-full ${journal.live ? "bg-green" : "bg-label3"}`}
-                title={journal.live ? "Synchronisé en temps réel" : "Connexion temps réel en cours…"}
-                aria-label={journal.live ? "Synchronisé en temps réel" : "Connexion temps réel en cours"}
+                title={journal.live ? "Synced in real time" : "Connecting to real time…"}
+                aria-label={journal.live ? "Synced in real time" : "Connecting to real time"}
               />
             </div>
             <div className="flex shrink-0 items-center gap-0.5">
@@ -495,22 +495,22 @@ export function JournalApp() {
                 <button type="button" onClick={() => composeAbort.current?.abort()} className="btn-plain px-2 text-[15px]">
                   <span className="h-4 w-4 animate-spin rounded-full border-2 border-blue border-t-transparent" aria-hidden />
                   <span>{exporting}</span>
-                  <span className="text-red">Arrêter</span>
+                  <span className="text-red">Stop</span>
                 </button>
               ) : (
-                <button type="button" onClick={() => setExportOpen(true)} disabled={!!exporting} aria-label="Exporter" className="btn-plain px-2 text-[15px]">
+                <button type="button" onClick={() => setExportOpen(true)} disabled={!!exporting} aria-label="Export" className="btn-plain px-2 text-[15px]">
                   <Icon name="doc" className="h-[18px] w-[18px]" />
-                  <span className={exporting ? "" : "hidden sm:inline"}>{exporting ?? "Exporter"}</span>
+                  <span className={exporting ? "" : "hidden sm:inline"}>{exporting ?? "Export"}</span>
                 </button>
               )}
-              <button type="button" onClick={copyJournal} aria-label="Copier en texte" className="btn-plain px-2 text-[15px]">
+              <button type="button" onClick={copyJournal} aria-label="Copy as text" className="btn-plain px-2 text-[15px]">
                 <Icon name="copy" className="h-[18px] w-[18px]" />
-                <span className="hidden sm:inline">Copier en texte</span>
+                <span className="hidden sm:inline">Copy as text</span>
               </button>
               <span className="mx-1 hidden h-5 w-[0.5px] bg-sep sm:block" aria-hidden />
               <span className="hidden text-[15px] text-label3 sm:inline">{me.name}</span>
-              <button type="button" onClick={() => setWhoOpen(true)} aria-label={`Changer de nom (actuellement ${me.name})`} className="btn-plain px-2 text-[15px]">
-                Changer
+              <button type="button" onClick={() => setWhoOpen(true)} aria-label={`Change name (currently ${me.name})`} className="btn-plain px-2 text-[15px]">
+                Change
               </button>
             </div>
           </div>
@@ -530,7 +530,7 @@ export function JournalApp() {
 
       <main className="mx-auto grid max-w-[1280px] grid-cols-[minmax(0,1fr)] gap-6 px-4 pt-4 split:grid-cols-[minmax(320px,400px)_minmax(0,1fr)]">
         <aside
-          aria-label="Liste des étapes"
+          aria-label="Step list"
           className={`${showRight ? "hidden split:block" : ""} split:sticky split:top-[calc(var(--header-h,120px)+16px)] split:max-h-[calc(100vh-var(--header-h,120px)-16px)] split:overflow-y-auto split:pb-8 scroll-thin`}
         >
           <HelpBanner />
@@ -539,9 +539,9 @@ export function JournalApp() {
           </div>
           {journal.error && (
             <div role="alert" className="card mb-3 p-3 text-[14px] text-red">
-              Impossible de charger le journal : {journal.error}
+              Could not load the log: {journal.error}
               <button type="button" className="btn-plain ml-1 min-h-0 p-0 text-[14px]" onClick={journal.reload}>
-                Réessayer
+                Retry
               </button>
             </div>
           )}
@@ -557,7 +557,7 @@ export function JournalApp() {
           />
         </aside>
 
-        <section aria-label="Détail" className={`${showRight ? "" : "hidden split:block"} min-w-0`}>
+        <section aria-label="Details" className={`${showRight ? "" : "hidden split:block"} min-w-0`}>
           {form ? (
             <StepForm
               key={formKey}
@@ -584,9 +584,9 @@ export function JournalApp() {
               onCopy={async () => {
                 try {
                   await copyToClipboard(stepToText(selected, selectedCaptures));
-                  toast("Fiche copiée", "success");
+                  toast("Entry copied", "success");
                 } catch {
-                  toast("Copie impossible.", "error");
+                  toast("Copy failed.", "error");
                 }
               }}
               onDelete={() => remove(selected)}
@@ -599,9 +599,9 @@ export function JournalApp() {
           ) : (
             <div className="flex min-h-[50vh] flex-col items-center justify-center px-6 text-center text-label3">
               <Icon name="doc" className="mb-3 h-12 w-12 opacity-50" />
-              <p className="text-[17px] font-semibold text-label">Sélectionne une étape</p>
+              <p className="text-[17px] font-semibold text-label">Select a step</p>
               <p className="mt-1 max-w-[360px] text-[15px]">
-                Ou colle une capture SAP (Ctrl/⌘ + V) n&apos;importe où pour créer une nouvelle étape.
+                Or paste an SAP screenshot (Ctrl/⌘ + V) anywhere to create a new step.
               </p>
             </div>
           )}
@@ -615,7 +615,7 @@ export function JournalApp() {
           await chooseName(n);
           setWhoOpen(false);
           setTab(n);
-          toast(`Tu es maintenant ${n}`, "success");
+          toast(`You are now ${n}`, "success");
         }}
         onClose={() => setWhoOpen(false)}
       />

@@ -63,7 +63,7 @@ export function Alert({
             onClick={onCancel}
             className="min-h-[44px] flex-1 text-[17px] text-blue active:bg-fill/20"
           >
-            {options.cancelLabel ?? "Annuler"}
+            {options.cancelLabel ?? "Cancel"}
           </button>
           <span className="w-[0.5px] bg-sep" aria-hidden />
           <button

@@ -1,18 +1,18 @@
 export const BLOCS = [
-  "1 · Company codes et FI",
-  "2 · Plants et storage locations",
-  "3 · Organisation achats",
-  "4 · Organisation ventes",
+  "1 · Company codes and FI",
+  "2 · Plants and storage locations",
+  "3 · Purchasing organization",
+  "4 · Sales organization",
   "5 · Shipping points",
   "6 · Business partners",
-  "7 · Material master et BOM",
-  "8 · Contrats et accords d'achat",
-  "9 · Production et MRP",
+  "7 · Material master and BOM",
+  "8 · Contracts and purchasing agreements",
+  "9 · Production and MRP",
   "10 · STO intercompany",
-  "11 · SD : documents et pricing",
+  "11 · SD: documents and pricing",
 ] as const;
 
-export const NO_BLOC = "Sans bloc";
+export const NO_BLOC = "No block";
 
 /** Numéro en tête du bloc (« 2 · Plants… » → 2), ou null. */
 export function blocNumber(bloc: string): number | null {

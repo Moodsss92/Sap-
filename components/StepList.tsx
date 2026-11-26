@@ -65,12 +65,12 @@ export function StepList({
         <div className="relative">
           <Icon name="search" className="pointer-events-none absolute left-2.5 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-label3" />
           <label htmlFor="search" className="sr-only">
-            Rechercher
+            Search
           </label>
           <input
             id="search"
             type="search"
-            placeholder="Rechercher (T-code, titre, valeurs…)"
+            placeholder="Search (T-code, title, values…)"
             value={filters.q}
             onChange={(e) => onFilters({ ...filters, q: e.target.value })}
             className="w-full rounded-[10px] bg-fill/[0.12] py-2.5 pl-9 pr-3 text-[17px] outline-none placeholder:text-label3 focus:ring-2 focus:ring-blue/50"
@@ -78,7 +78,7 @@ export function StepList({
         </div>
         <div className="flex gap-2">
           <label className="sr-only" htmlFor="filter-bloc">
-            Filtrer par bloc
+            Filter by block
           </label>
           <select
             id="filter-bloc"
@@ -86,7 +86,7 @@ export function StepList({
             onChange={(e) => onFilters({ ...filters, bloc: e.target.value })}
             className="min-h-[40px] min-w-0 flex-1 rounded-[10px] bg-card px-2.5 text-[15px] text-label outline-none focus:ring-2 focus:ring-blue/50"
           >
-            <option value="">Tous les blocs</option>
+            <option value="">All blocks</option>
             {blocOptions.map((b) => (
               <option key={b} value={b}>
                 {b}
@@ -94,7 +94,7 @@ export function StepList({
             ))}
           </select>
           <label className="sr-only" htmlFor="filter-statut">
-            Filtrer par statut
+            Filter by status
           </label>
           <select
             id="filter-statut"
@@ -102,7 +102,7 @@ export function StepList({
             onChange={(e) => onFilters({ ...filters, statut: e.target.value as Statut | "" })}
             className="min-h-[40px] w-[130px] shrink-0 rounded-[10px] bg-card px-2.5 text-[15px] text-label outline-none focus:ring-2 focus:ring-blue/50"
           >
-            <option value="">Tous statuts</option>
+            <option value="">All statuses</option>
             {STATUTS.map((s) => (
               <option key={s} value={s}>
                 {STATUT_LABEL[s]}
@@ -113,20 +113,20 @@ export function StepList({
       </div>
 
       {loading ? (
-        <div className="space-y-2" aria-label="Chargement">
+        <div className="space-y-2" aria-label="Loading">
           {[0, 1, 2].map((i) => (
             <div key={i} className="card h-[64px] animate-pulse" />
           ))}
         </div>
       ) : groups.length === 0 ? (
         <div className="card px-4 py-8 text-center">
-          <p className="text-[17px] font-semibold">{hasFilters ? "Aucun résultat" : "Aucune étape pour l'instant"}</p>
+          <p className="text-[17px] font-semibold">{hasFilters ? "No results" : "No steps yet"}</p>
           <p className="mt-1 text-[14px] text-label3">
-            {hasFilters ? "Modifie la recherche ou les filtres." : "Dépose une capture d'écran SAP pour créer la première."}
+            {hasFilters ? "Change the search or filters." : "Drop an SAP screenshot to create the first one."}
           </p>
           {hasFilters && (
             <button type="button" className="btn-plain mt-2" onClick={() => onFilters({ q: "", bloc: "", statut: "" })}>
-              Effacer les filtres
+              Clear filters
             </button>
           )}
         </div>
@@ -147,10 +147,10 @@ export function StepList({
                   <Icon name="chevron-down" className={`h-4 w-4 shrink-0 text-label3 transition-transform ${open ? "" : "-rotate-90"}`} />
                   <span className="min-w-0 flex-1 truncate text-[15px] font-semibold">{g.bloc}</span>
                   <span className="shrink-0 text-[13px] tabular-nums text-label3">
-                    {done}/{g.steps.length} faites
+                    {done}/{g.steps.length} done
                   </span>
                 </button>
-                <div className="mx-1 mb-2 h-1 overflow-hidden rounded-full bg-fill/20" role="progressbar" aria-valuemin={0} aria-valuemax={g.steps.length} aria-valuenow={done} aria-label={`Progression ${g.bloc}`}>
+                <div className="mx-1 mb-2 h-1 overflow-hidden rounded-full bg-fill/20" role="progressbar" aria-valuemin={0} aria-valuemax={g.steps.length} aria-valuenow={done} aria-label={`Progress ${g.bloc}`}>
                   <div className="h-full rounded-full bg-green transition-all" style={{ width: `${pct}%` }} />
                 </div>
                 {open && (
@@ -170,11 +170,11 @@ export function StepList({
                           >
                             <span className="w-9 shrink-0 text-[14px] font-semibold tabular-nums text-label3">{s.num || "–"}</span>
                             <span className="min-w-0 flex-1">
-                              <span className="block truncate text-[16px]">{s.titre || <em className="text-label3">Sans titre</em>}</span>
+                              <span className="block truncate text-[16px]">{s.titre || <em className="text-label3">Untitled</em>}</span>
                               <span className="mt-0.5 flex items-center gap-1.5 text-[12px] text-label3">
                                 <TcodeBadge tcode={s.tcode} />
                                 {nCap > 0 && (
-                                  <span className="inline-flex items-center gap-0.5" aria-label={`${nCap} capture${nCap > 1 ? "s" : ""}`}>
+                                  <span className="inline-flex items-center gap-0.5" aria-label={`${nCap} screenshot${nCap > 1 ? "s" : ""}`}>
                                     <Icon name="image" className="h-3.5 w-3.5" />
                                     {nCap}
                                   </span>

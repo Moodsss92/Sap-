@@ -5,10 +5,10 @@ export const STATUTS = ["afaire", "encours", "fait", "probleme"] as const;
 export type Statut = (typeof STATUTS)[number];
 
 export const STATUT_LABEL: Record<Statut, string> = {
-  afaire: "À faire",
-  encours: "En cours",
-  fait: "Fait",
-  probleme: "Problème",
+  afaire: "To do",
+  encours: "In progress",
+  fait: "Done",
+  probleme: "Issue",
 };
 
 export interface Member {

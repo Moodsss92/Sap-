@@ -42,7 +42,7 @@ export function buildTeamSummary(steps: Step[], capturesByStep: Map<string, Capt
     if (s.resp && !b.contributors.includes(s.resp)) b.contributors.push(s.resp);
     blocMap.set(bloc, b);
 
-    const who = s.resp || "Non attribué";
+    const who = s.resp || "Unassigned";
     const m = memberMap.get(who) ?? { name: who, total: 0, fait: 0, captures: 0 };
     m.total++;
     if (s.statut === "fait") m.fait++;

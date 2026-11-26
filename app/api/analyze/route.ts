@@ -16,8 +16,8 @@ type ImageMediaType = "image/png" | "image/jpeg" | "image/webp" | "image/gif";
 
 const RequestSchema = z.object({
   paths: z
-    .array(z.string().min(1).max(500).refine((p) => !p.includes(".."), "Chemin invalide"))
-    .min(1, "Aucune capture à analyser.")
+    .array(z.string().min(1).max(500).refine((p) => !p.includes(".."), "Invalid path"))
+    .min(1, "No screenshots to analyze.")
     .max(20),
 });
 
@@ -44,14 +44,14 @@ const ResultSchema = z.object({
 });
 
 function buildPrompt(): string {
-  return `Tu aides une équipe de stagiaires SAP S/4HANA (MM/SD) à documenter la configuration du business case Philo Televisions (company codes C2NL et C2BE copiées de 1010, plants Breda, Delft, Brussels, Antwerp, purchasing orgs P2HQ/P2BR/P2BX/P2AN, sales orgs S2NL/S2BE). Voici des captures d'écran SAP GUI ou Fiori d'une étape de configuration. Lis le titre de l'écran, les champs, les valeurs et le message de la barre d'état. Réponds UNIQUEMENT en JSON :
-{"tcode":"","titre":"","chemin":"chemin SPRO complet séparé par ' › '","action":"1 à 3 phrases","valeurs":"Champ : valeur, une par ligne","controle":"message visible et sa signification, ou le contrôle à faire ensuite","bloc":"un des blocs de la liste"}.
-N'invente rien qui ne soit pas visible ou certain ; laisse la chaîne vide sinon.
+  return `You are helping a team of SAP S/4HANA (MM/SD) trainees document the configuration of the Philo Televisions business case (company codes C2NL and C2BE copied from 1010, plants Breda, Delft, Brussels, Antwerp, purchasing orgs P2HQ/P2BR/P2BX/P2AN, sales orgs S2NL/S2BE). Here are SAP GUI or Fiori screenshots of one configuration step. Read the screen title, the fields, the values and the status bar message. Write in English. Reply ONLY with JSON:
+{"tcode":"","titre":"short step title","chemin":"full SPRO path separated by ' › '","action":"1 to 3 sentences","valeurs":"Field: value, one per line","controle":"visible message and what it means, or the check to do next","bloc":"one of the blocks in the list"}.
+Do not invent anything that is not visible or certain; leave the string empty otherwise.
 
-Blocs possibles :
+Possible blocks:
 ${BLOCS.join("\n")}
 
-Chemins de référence :
+Reference paths:
 ${tcodesForPrompt()}`;
 }
 
@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
   if (!auth.ok) return fail(auth.error, auth.status);
 
   if (!process.env.ANTHROPIC_API_KEY) {
-    return fail("La clé ANTHROPIC_API_KEY n'est pas configurée sur le serveur.", 500);
+    return fail("ANTHROPIC_API_KEY is not configured on the server.", 500);
   }
 
   // 2. Corps de la requête
@@ -92,7 +92,7 @@ export async function POST(request: NextRequest) {
   try {
     body = RequestSchema.parse(await request.json());
   } catch {
-    return fail("Requête invalide : liste de captures attendue.", 400);
+    return fail("Invalid request: a list of screenshots was expected.", 400);
   }
   const paths = body.paths.slice(0, MAX_IMAGES);
 
@@ -102,10 +102,10 @@ export async function POST(request: NextRequest) {
   const images: Anthropic.Beta.BetaImageBlockParam[] = [];
   for (const path of paths) {
     const { data, error } = await storage.from("captures").download(path);
-    if (error || !data) return fail(`Capture introuvable dans le Storage (${path}).`, 404);
+    if (error || !data) return fail(`Screenshot not found in Storage (${path}).`, 404);
     const buffer = Buffer.from(await data.arrayBuffer());
     if (buffer.byteLength > 5 * 1024 * 1024) {
-      return fail("Une capture dépasse 5 Mo : réduis-la avant de l'analyser.", 413);
+      return fail("A screenshot is larger than 5 MB: shrink it before analyzing.", 413);
     }
     images.push({
       type: "image",
@@ -137,27 +137,27 @@ export async function POST(request: NextRequest) {
       { signal: request.signal },
     );
   } catch (err) {
-    if (request.signal.aborted) return fail("Analyse arrêtée.", 499);
+    if (request.signal.aborted) return fail("Analysis stopped.", 499);
     if (err instanceof Anthropic.RateLimitError) {
-      return fail("Trop de demandes à Claude pour le moment : réessaie dans une minute.", 429);
+      return fail("Too many requests to Claude right now: try again in a minute.", 429);
     }
     if (err instanceof Anthropic.AuthenticationError) {
-      return fail("Clé API Anthropic invalide côté serveur.", 500);
+      return fail("Invalid Anthropic API key on the server.", 500);
     }
     if (err instanceof Anthropic.BadRequestError) {
-      return fail(`Claude a refusé la requête : ${err.message}`, 400);
+      return fail(`Claude rejected the request: ${err.message}`, 400);
     }
     if (err instanceof Anthropic.APIConnectionError) {
-      return fail("Impossible de joindre l'API Claude. Vérifie la connexion du serveur.", 502);
+      return fail("Could not reach the Claude API. Check the server connection.", 502);
     }
     if (err instanceof Anthropic.APIError) {
-      return fail(`Erreur de l'API Claude (${err.status ?? "?"}). Réessaie.`, 502);
+      return fail(`Claude API error (${err.status ?? "?"}). Try again.`, 502);
     }
-    return fail("Erreur inattendue pendant l'analyse.", 500);
+    return fail("Unexpected error during analysis.", 500);
   }
 
   if (message.stop_reason === "refusal") {
-    return fail("Claude n'a pas pu analyser ces captures. Remplis la fiche à la main.", 422);
+    return fail("Claude could not analyze these screenshots. Fill in the entry by hand.", 422);
   }
 
   const raw = message.content
@@ -170,7 +170,7 @@ export async function POST(request: NextRequest) {
   try {
     parsed = ResultSchema.parse(extractJson(raw));
   } catch {
-    return fail("Réponse de Claude illisible (JSON invalide). Réessaie ou remplis à la main.", 502);
+    return fail("Unreadable response from Claude (invalid JSON). Try again or fill it in by hand.", 502);
   }
 
   const result = {

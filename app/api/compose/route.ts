@@ -28,38 +28,38 @@ function fail(message: string, status: number) {
 }
 
 function stepForPrompt(s: Step, caps: Capture[]): string {
-  const lines = [`### ${s.num || "–"} · ${s.titre || "(sans titre)"} [${STATUT_LABEL[s.statut]}] — responsable : ${s.resp || "?"}`];
-  const add = (k: string, v: string) => v.trim() && lines.push(`${k} : ${v.trim()}`);
+  const lines = [`### ${s.num || "–"} · ${s.titre || "(untitled)"} [${STATUT_LABEL[s.statut]}] — owner: ${s.resp || "?"}`];
+  const add = (k: string, v: string) => v.trim() && lines.push(`${k}: ${v.trim()}`);
   add("T-code", s.tcode);
-  add("Chemin", s.chemin);
-  add("Ce qu'on fait", s.action);
-  add("Valeurs", s.valeurs);
-  add("Contrôle", s.controle);
-  add("Problème / solution", s.remarque);
+  add("Path", s.chemin);
+  add("What we did", s.action);
+  add("Values", s.valeurs);
+  add("Check", s.controle);
+  add("Issue / solution", s.remarque);
   const legendes = caps.map((c) => c.legende).filter(Boolean);
-  if (legendes.length) lines.push(`Légendes des captures : ${legendes.join(" ; ")}`);
+  if (legendes.length) lines.push(`Screenshot captions: ${legendes.join("; ")}`);
   return lines.join("\n");
 }
 
 function buildPrompt(journal: string): string {
-  return `Tu aides une équipe de stagiaires SAP S/4HANA (MM/SD) à transformer leur journal de configuration, écrit à plusieurs mains, en une documentation finale claire et cohérente.
+  return `You are helping a team of SAP S/4HANA (MM/SD) trainees turn their configuration log, written by several people, into clear and coherent final documentation.
 
 ${businessCaseText()}
 
-Voici le journal, groupé par bloc. Chaque fiche a été écrite par un membre différent de l'équipe.
+Here is the log, grouped by block. Each entry was written by a different team member. Some entries may be written in French.
 
 <journal>
 ${journal}
 </journal>
 
-Rédige UNIQUEMENT le texte de liaison du document. Les fiches seront reproduites telles quelles : ne les réécris pas.
-1. "synthese" : 2 paragraphes séparés par une ligne vide. Que configure l'équipe, dans quel ordre, et en quoi les blocs s'enchaînent (structure organisationnelle → données de base → flux achats / ventes).
-2. "blocs" : pour CHAQUE bloc présent dans le journal (reprends son nom exact), une "intro" de 2 à 4 phrases : ce que le bloc configure, à quoi il sert dans le business case, et le lien avec les blocs précédents ou suivants.
-3. "a_verifier" : au maximum 15 points concrets à relire, chacun rattaché au numéro de la fiche concernée ("num") : valeurs incohérentes entre deux fiches (codes d'unités organisationnelles différents, par exemple), contrôle manquant sur une étape faite, étape faite sans valeurs saisies, doublon. Liste vide s'il n'y a rien.
+Write ONLY the connecting text of the document. The entries will be reproduced as they are: do not rewrite them.
+1. "synthese": 2 paragraphs separated by a blank line. What the team configures, in what order, and how the blocks connect (organizational structure → master data → purchasing / sales flows).
+2. "blocs": for EACH block in the log (use its exact name), an "intro" of 2 to 4 sentences: what the block configures, what it is for in the business case, and how it links to the previous or next blocks.
+3. "a_verifier": at most 15 concrete points to review, each tied to the number of the entry concerned ("num"): values that conflict between two entries (for example different organizational unit codes), a missing check on a completed step, a completed step with no values entered, a duplicate. Empty list if there is nothing.
 
-Règles : écris en français, dans un registre de documentation professionnelle, à la 3e personne (« l'équipe a… »). Appuie-toi uniquement sur le journal et le business case ; n'invente aucune valeur, aucun code ni aucun message SAP. Ne cite pas les prénoms dans la synthèse ni dans les introductions.
+Rules: write in English, in a professional documentation register, in the third person ("the team configured…"). Rely only on the log and the business case; do not invent any value, code or SAP message. Do not mention first names in the summary or the introductions.
 
-Réponds UNIQUEMENT en JSON :
+Reply ONLY with JSON:
 {"synthese":"","blocs":[{"bloc":"","intro":""}],"a_verifier":[{"num":"","point":""}]}`;
 }
 
@@ -75,14 +75,14 @@ export async function POST(request: NextRequest) {
   const auth = await requireMember();
   if (!auth.ok) return fail(auth.error, auth.status);
   if (!process.env.ANTHROPIC_API_KEY) {
-    return fail("La clé ANTHROPIC_API_KEY n'est pas configurée sur le serveur.", 500);
+    return fail("ANTHROPIC_API_KEY is not configured on the server.", 500);
   }
 
   let body: z.infer<typeof RequestSchema>;
   try {
     body = RequestSchema.parse(await request.json().catch(() => ({})));
   } catch {
-    return fail("Requête invalide.", 400);
+    return fail("Invalid request.", 400);
   }
 
   // Le serveur relit lui-même le journal (droits RLS de l'utilisateur)
@@ -90,13 +90,13 @@ export async function POST(request: NextRequest) {
     auth.supabase.from("steps").select("*"),
     auth.supabase.from("captures").select("step_id, legende, position").order("position"),
   ]);
-  if (stepsRes.error || capsRes.error) return fail("Lecture du journal impossible.", 500);
+  if (stepsRes.error || capsRes.error) return fail("Could not read the log.", 500);
 
   const steps = (stepsRes.data as Step[])
     .filter((s) => !body.onlyDone || s.statut === "fait")
     .sort(compareSteps);
   if (!steps.length) {
-    return fail(body.onlyDone ? "Aucune étape au statut « Fait » pour l'instant." : "Le journal est vide.", 400);
+    return fail(body.onlyDone ? "No steps marked \"Done\" yet." : "The log is empty.", 400);
   }
   const capsByStep = new Map<string, Capture[]>();
   for (const c of capsRes.data as Capture[]) capsByStep.set(c.step_id, [...(capsByStep.get(c.step_id) ?? []), c]);
@@ -113,7 +113,7 @@ export async function POST(request: NextRequest) {
   }
   const journal = parts.join("\n\n");
   if (journal.length > MAX_INPUT_CHARS) {
-    return fail("Le journal est trop long pour être relu en une fois. Exporte bloc par bloc avec les filtres.", 413);
+    return fail("The log is too long to review in one go. Export block by block using the filters.", 413);
   }
 
   const anthropic = new Anthropic();
@@ -131,17 +131,17 @@ export async function POST(request: NextRequest) {
       { signal: request.signal },
     );
   } catch (err) {
-    if (request.signal.aborted) return fail("Rédaction arrêtée.", 499);
-    if (err instanceof Anthropic.RateLimitError) return fail("Trop de demandes à Claude : réessaie dans une minute.", 429);
-    if (err instanceof Anthropic.AuthenticationError) return fail("Clé API Anthropic invalide côté serveur.", 500);
-    if (err instanceof Anthropic.BadRequestError) return fail(`Claude a refusé la requête : ${err.message}`, 400);
-    if (err instanceof Anthropic.APIConnectionError) return fail("Impossible de joindre l'API Claude.", 502);
-    if (err instanceof Anthropic.APIError) return fail(`Erreur de l'API Claude (${err.status ?? "?"}). Réessaie.`, 502);
-    return fail("Erreur inattendue pendant la rédaction.", 500);
+    if (request.signal.aborted) return fail("Writing stopped.", 499);
+    if (err instanceof Anthropic.RateLimitError) return fail("Too many requests to Claude: try again in a minute.", 429);
+    if (err instanceof Anthropic.AuthenticationError) return fail("Invalid Anthropic API key on the server.", 500);
+    if (err instanceof Anthropic.BadRequestError) return fail(`Claude rejected the request: ${err.message}`, 400);
+    if (err instanceof Anthropic.APIConnectionError) return fail("Could not reach the Claude API.", 502);
+    if (err instanceof Anthropic.APIError) return fail(`Claude API error (${err.status ?? "?"}). Try again.`, 502);
+    return fail("Unexpected error while writing.", 500);
   }
 
-  if (message.stop_reason === "refusal") return fail("Claude n'a pas pu rédiger ce document.", 422);
-  if (message.stop_reason === "max_tokens") return fail("Réponse de Claude incomplète (journal trop long). Réessaie avec moins d'étapes.", 502);
+  if (message.stop_reason === "refusal") return fail("Claude could not write this document.", 422);
+  if (message.stop_reason === "max_tokens") return fail("Incomplete response from Claude (log too long). Try again with fewer steps.", 502);
 
   const raw = message.content
     .filter((b): b is Anthropic.Beta.BetaTextBlock => b.type === "text")
@@ -152,7 +152,7 @@ export async function POST(request: NextRequest) {
   try {
     parsed = ComposedSchema.parse(extractJson(raw));
   } catch {
-    return fail("Réponse de Claude illisible (JSON invalide). Réessaie.", 502);
+    return fail("Unreadable response from Claude (invalid JSON). Try again.", 502);
   }
 
   const result: ComposedDoc = {

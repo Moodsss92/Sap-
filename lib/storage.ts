@@ -23,7 +23,7 @@ export async function uploadCaptures(
       contentType: type,
       upsert: false,
     });
-    if (error) throw new Error(`Envoi de « ${files[i].name || "capture"} » impossible : ${error.message}`);
+    if (error) throw new Error(`Could not upload "${files[i].name || "screenshot"}": ${error.message}`);
     paths.push(path);
     onProgress?.(i + 1, files.length);
   }

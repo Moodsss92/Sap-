@@ -31,10 +31,10 @@ export function NewFromCaptureButton({
         </span>
         <span className="min-w-0 flex-1">
           <span className="block text-[17px] font-semibold">
-            {busy ? `Envoi des captures… ${progress.done}/${progress.total}` : over ? "Dépose pour créer l'étape" : "+ Nouvelle étape depuis une capture"}
+            {busy ? `Uploading screenshots… ${progress.done}/${progress.total}` : over ? "Drop to create the step" : "+ New step from a screenshot"}
           </span>
           <span className="block text-[13px] text-white/80">
-            {busy ? "Ne ferme pas la page" : "Glisse une ou plusieurs images, choisis des fichiers ou colle avec Ctrl/⌘ + V"}
+            {busy ? "Don't close the page" : "Drag one or more images, choose files or paste with Ctrl/⌘ + V"}
           </span>
         </span>
       </button>

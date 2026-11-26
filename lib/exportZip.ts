@@ -17,7 +17,7 @@ function safe(name: string, max = 60): string {
       .replace(/\s+/g, " ")
       .trim()
       .slice(0, max)
-      .replace(/[ .]+$/, "") || "sans-titre"
+      .replace(/[ .]+$/, "") || "untitled"
   );
 }
 
@@ -28,37 +28,37 @@ function blocFolder(bloc: string): string {
 }
 
 function stepFolder(s: Step): string {
-  return safe([s.num, s.tcode, s.titre || "sans titre"].filter(Boolean).join(" - "), 80);
+  return safe([s.num, s.tcode, s.titre || "untitled"].filter(Boolean).join(" - "), 80);
 }
 
 function summaryText(steps: Step[], capturesByStep: Map<string, Capture[]>): string {
   const s = buildTeamSummary(steps, capturesByStep);
   const lines = [
-    "ASSEMBLAGE DE L'ÉQUIPE",
-    `${s.fait}/${s.total} étapes faites (${s.pct} %)`,
+    "HOW THE TEAM'S WORK FITS TOGETHER",
+    `${s.fait}/${s.total} steps done (${s.pct}%)`,
     "",
-    "Avancement par bloc :",
+    "Progress by block:",
     ...s.blocs.map(
-      (b) => `  ${b.bloc} : ${b.byStatut.fait}/${b.total} faites` + (b.contributors.length ? ` (${b.contributors.join(", ")})` : ""),
+      (b) => `  ${b.bloc}: ${b.byStatut.fait}/${b.total} done` + (b.contributors.length ? ` (${b.contributors.join(", ")})` : ""),
     ),
     "",
-    "Contribution de chacun :",
-    ...s.members.map((m) => `  ${m.name} : ${m.total} étape(s), ${m.fait} faite(s), ${m.captures} capture(s)`),
+    "Contribution by member:",
+    ...s.members.map((m) => `  ${m.name}: ${m.total} step(s), ${m.fait} done, ${m.captures} screenshot(s)`),
     "",
-    "Pièces manquantes :",
-    ...(s.emptyBlocs.length ? s.emptyBlocs.map((b) => `  Bloc sans étape : ${b}`) : []),
-    ...s.openSteps.map((st) => `  ${st.num || "–"} ${st.titre || "(sans titre)"} : ${STATUT_LABEL[st.statut]} · ${st.resp || "non attribuée"}`),
-    ...(!s.emptyBlocs.length && !s.openSteps.length ? ["  Rien ne manque, tout est fait."] : []),
+    "Missing pieces:",
+    ...(s.emptyBlocs.length ? s.emptyBlocs.map((b) => `  Block with no steps: ${b}`) : []),
+    ...s.openSteps.map((st) => `  ${st.num || "–"} ${st.titre || "(untitled)"}: ${STATUT_LABEL[st.statut]} · ${st.resp || "unassigned"}`),
+    ...(!s.emptyBlocs.length && !s.openSteps.length ? ["  Nothing missing, everything is done."] : []),
   ];
   return lines.join("\n") + "\n";
 }
 
 /**
  * ZIP des captures rangées comme le journal :
- *   00 - LISEZMOI.txt            synthèse + journal complet
+ *   00 - README.txt              synthèse + journal complet
  *   01 - Company codes et FI/
  *     1.4 - OBY6 - Paramètres globaux/
- *       fiche.txt
+ *       entry.txt
  *       capture 1 - Écran OBY6.png
  */
 export async function exportCapturesZip(
@@ -68,8 +68,8 @@ export async function exportCapturesZip(
 ): Promise<{ blob: Blob; missing: number }> {
   const zip = new JSZip();
   zip.file(
-    "00 - LISEZMOI.txt",
-    `${opts.title}\nExporté le ${new Date().toLocaleString("fr-FR")}\n\n${summaryText(steps, capturesByStep)}\n\n${journalToText(steps, capturesByStep, "JOURNAL COMPLET")}`,
+    "00 - README.txt",
+    `${opts.title}\nExported on ${new Date().toLocaleString("en-GB")}\n\n${summaryText(steps, capturesByStep)}\n\n${journalToText(steps, capturesByStep, "FULL LOG")}`,
   );
 
   const total = steps.reduce((n, s) => n + (capturesByStep.get(s.id)?.length ?? 0), 0);
@@ -84,12 +84,12 @@ export async function exportCapturesZip(
     used.add(dir);
 
     const caps = capturesByStep.get(s.id) ?? [];
-    zip.file(`${dir}/fiche.txt`, stepToText(s, caps) + "\n");
+    zip.file(`${dir}/entry.txt`, stepToText(s, caps) + "\n");
 
     for (let i = 0; i < caps.length; i++) {
       const c = caps[i];
       const ext = c.path.split(".").pop() || "png";
-      const name = safe(`capture ${i + 1}${c.legende ? " - " + c.legende : ""}`, 70);
+      const name = safe(`screenshot ${i + 1}${c.legende ? " - " + c.legende : ""}`, 70);
       try {
         const url = await signedUrl(c.path);
         const res = url ? await fetch(url) : null;

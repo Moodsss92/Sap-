@@ -18,7 +18,7 @@ function Row({ label, children, tone }: { label: string; children: ReactNode; to
 }
 
 function formatDate(iso: string) {
-  return new Date(iso).toLocaleString("fr-FR", { dateStyle: "medium", timeStyle: "short" });
+  return new Date(iso).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" });
 }
 
 export function StepDetail({
@@ -64,18 +64,18 @@ export function StepDetail({
       <div className="mb-2 flex items-center justify-between gap-2">
         <button type="button" onClick={onBack} className="btn-plain -ml-2 split:hidden">
           <Icon name="chevron-left" />
-          Liste
+          List
         </button>
         <span className="hidden text-[13px] tabular-nums text-label3 split:inline">
-          {position.index + 1} / {position.total} · ↑↓ pour naviguer
+          {position.index + 1} / {position.total} · ↑↓ to navigate
         </span>
         <div className="flex gap-1">
-          <button type="button" onClick={onPrev} disabled={!onPrev} aria-label="Étape précédente" className="btn-tinted px-3">
+          <button type="button" onClick={onPrev} disabled={!onPrev} aria-label="Previous step" className="btn-tinted px-3">
             <Icon name="chevron-up" />
-            <span className="hidden sm:inline">Précédent</span>
+            <span className="hidden sm:inline">Previous</span>
           </button>
-          <button type="button" onClick={onNext} disabled={!onNext} aria-label="Étape suivante" className="btn-tinted px-3">
-            <span className="hidden sm:inline">Suivant</span>
+          <button type="button" onClick={onNext} disabled={!onNext} aria-label="Next step" className="btn-tinted px-3">
+            <span className="hidden sm:inline">Next</span>
             <Icon name="chevron-down" />
           </button>
         </div>
@@ -88,14 +88,14 @@ export function StepDetail({
           <TcodeBadge tcode={step.tcode} />
         </div>
         <h1 id="step-title" className="mt-1 text-[30px] font-bold leading-tight tracking-tight">
-          {step.titre || <span className="text-label3">Sans titre</span>}
+          {step.titre || <span className="text-label3">Untitled</span>}
         </h1>
       </header>
 
       {/* Statut en un clic */}
       <div className="mb-5">
         <SegmentedControl
-          label="Statut"
+          label="Status"
           value={step.statut}
           onChange={onStatut}
           segments={STATUTS.map((s) => ({ value: s, label: <StatutLabel statut={s} />, tint: STATUT_STYLE[s].text }))}
@@ -104,41 +104,41 @@ export function StepDetail({
 
       {/* Infos groupées façon Réglages */}
       <dl className="card inset-list mb-5 overflow-hidden">
-        <Row label="Bloc">{step.bloc || "—"}</Row>
-        <Row label="Responsable">{step.resp || "—"}</Row>
+        <Row label="Block">{step.bloc || "—"}</Row>
+        <Row label="Owner">{step.resp || "—"}</Row>
         <Row label="Transaction">{step.tcode ? <span className="font-mono font-semibold">{step.tcode}</span> : "—"}</Row>
-        <Row label="Chemin">
+        <Row label="Path">
           {step.chemin ? <span className="font-mono text-[14px] text-blue">{step.chemin}</span> : "—"}
         </Row>
       </dl>
 
       <dl className="card inset-list mb-5 overflow-hidden">
-        <Row label="Ce qu'on fait">{step.action || <span className="text-label3">À compléter</span>}</Row>
-        <Row label="Valeurs saisies">{step.valeurs ? <span className="font-mono text-[14px]">{step.valeurs}</span> : "—"}</Row>
-        <Row label="Contrôle">{step.controle || "—"}</Row>
+        <Row label="What we did">{step.action || <span className="text-label3">To be completed</span>}</Row>
+        <Row label="Values entered">{step.valeurs ? <span className="font-mono text-[14px]">{step.valeurs}</span> : "—"}</Row>
+        <Row label="Check">{step.controle || "—"}</Row>
         {step.remarque && (
-          <Row label="Problème / solution" tone="red">
+          <Row label="Issue / solution" tone="red">
             {step.remarque}
           </Row>
         )}
       </dl>
 
       <p className="mb-6 px-4 text-[13px] text-label3">
-        Mis à jour le {formatDate(step.updated_at)}
-        {updaterName ? ` par ${updaterName}` : ""}
-        {authorName ? ` · créé par ${authorName}` : ""}
+        Updated {formatDate(step.updated_at)}
+        {updaterName ? ` by ${updaterName}` : ""}
+        {authorName ? ` · created by ${authorName}` : ""}
       </p>
 
       {/* Captures */}
-      <h2 className="section-title">Captures ({captures.length})</h2>
+      <h2 className="section-title">Screenshots ({captures.length})</h2>
       <div className="space-y-4">
         {captures.map((c, i) => (
           <figure key={c.id} className="card overflow-hidden">
-            <button type="button" onClick={() => setLightbox(i)} className="block w-full bg-black/5" aria-label={`Agrandir la capture ${i + 1}`}>
-              <CaptureImage path={c.path} alt={c.legende || `Capture ${i + 1}`} className="mx-auto max-h-[520px] w-full object-contain" />
+            <button type="button" onClick={() => setLightbox(i)} className="block w-full bg-black/5" aria-label={`Enlarge screenshot ${i + 1}`}>
+              <CaptureImage path={c.path} alt={c.legende || `Screenshot ${i + 1}`} className="mx-auto max-h-[520px] w-full object-contain" />
             </button>
             <figcaption className="px-4 py-2.5 text-[14px] text-label3">
-              Capture {i + 1}/{captures.length}
+              Screenshot {i + 1}/{captures.length}
               {c.legende ? ` · ${c.legende}` : ""}
             </figcaption>
           </figure>
@@ -149,19 +149,19 @@ export function StepDetail({
       {/* Actions */}
       <div className="mt-6 grid grid-cols-2 gap-2 sm:grid-cols-3">
         <button type="button" onClick={onEdit} className="btn-blue">
-          <Icon name="edit" className="h-[18px] w-[18px]" /> Modifier
+          <Icon name="edit" className="h-[18px] w-[18px]" /> Edit
         </button>
         <button type="button" onClick={onNextInBloc} className="btn-tinted">
-          <Icon name="plus" className="h-[18px] w-[18px]" /> Étape suivante dans ce bloc
+          <Icon name="plus" className="h-[18px] w-[18px]" /> Next step in this block
         </button>
         <button type="button" onClick={onDuplicate} className="btn-tinted">
-          <Icon name="duplicate" className="h-[18px] w-[18px]" /> Dupliquer
+          <Icon name="duplicate" className="h-[18px] w-[18px]" /> Duplicate
         </button>
         <button type="button" onClick={onCopy} className="btn-tinted">
-          <Icon name="copy" className="h-[18px] w-[18px]" /> Copier cette fiche
+          <Icon name="copy" className="h-[18px] w-[18px]" /> Copy this entry
         </button>
         <button type="button" onClick={onDelete} className="btn-danger">
-          <Icon name="trash" className="h-[18px] w-[18px]" /> Supprimer
+          <Icon name="trash" className="h-[18px] w-[18px]" /> Delete
         </button>
       </div>
 

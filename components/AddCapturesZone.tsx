@@ -11,7 +11,7 @@ import { Icon } from "./ui/Badges";
 export function AddCapturesZone({
   onFiles,
   progress,
-  label = "+ Ajouter d'autres captures",
+  label = "+ Add more screenshots",
   target,
 }: {
   onFiles: (files: File[]) => void;
@@ -36,9 +36,9 @@ export function AddCapturesZone({
       >
         <span className="flex items-center gap-1.5 text-[16px] font-semibold text-blue">
           <Icon name="camera" className="h-5 w-5" />
-          {busy ? `Envoi des captures… ${progress.done}/${progress.total}` : over ? "Dépose ici" : label}
+          {busy ? `Uploading screenshots… ${progress.done}/${progress.total}` : over ? "Drop here" : label}
         </span>
-        {!busy && <span className="text-[13px] text-label3">Glisse des images, clique, ou clique puis colle (Ctrl/⌘ + V)</span>}
+        {!busy && <span className="text-[13px] text-label3">Drag images, click, or click then paste (Ctrl/⌘ + V)</span>}
       </button>
       <input
         ref={input}

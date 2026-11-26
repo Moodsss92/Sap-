@@ -25,18 +25,18 @@ export function WhoAreYouSheet({
     try {
       await onChoose(name);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Enregistrement impossible.");
+      setError(e instanceof Error ? e.message : "Could not save.");
     } finally {
       setBusy(null);
     }
   }
 
   return (
-    <BottomSheet open={open} title="Qui es-tu ?" onClose={onClose} dismissible={!!current}>
+    <BottomSheet open={open} title="Who are you?" onClose={onClose} dismissible={!!current}>
       <div className="px-4 pt-3">
-        <h2 className="text-center text-[22px] font-bold">Qui es-tu ?</h2>
+        <h2 className="text-center text-[22px] font-bold">Who are you?</h2>
         <p className="mt-1 text-center text-[15px] text-label3">
-          Choisis ton nom pour entrer dans le journal. Il signe tes fiches ; tu pourras le changer à tout moment.
+          Pick your name to enter the log. It signs your entries; you can change it at any time.
         </p>
         <div className="card inset-list mt-5 overflow-hidden">
           {MEMBERS.map((name) => (
@@ -54,7 +54,7 @@ export function WhoAreYouSheet({
               {busy === name ? (
                 <span className="text-[14px] text-label3">…</span>
               ) : current === name ? (
-                <svg viewBox="0 0 24 24" className="h-5 w-5 text-blue" fill="none" stroke="currentColor" strokeWidth={2.6} aria-label="sélectionné">
+                <svg viewBox="0 0 24 24" className="h-5 w-5 text-blue" fill="none" stroke="currentColor" strokeWidth={2.6} aria-label="selected">
                   <path d="m5 12 5 5 9-10" />
                 </svg>
               ) : (
@@ -70,7 +70,7 @@ export function WhoAreYouSheet({
         )}
         {current && (
           <button type="button" className="btn-plain mt-2 w-full" onClick={onClose}>
-            Annuler
+            Cancel
           </button>
         )}
       </div>

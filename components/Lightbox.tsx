@@ -42,25 +42,25 @@ export function Lightbox({
   const c = captures[index];
 
   return (
-    <div className="anim-fade fixed inset-0 z-[55] flex flex-col bg-black/95 text-white" role="dialog" aria-modal="true" aria-label="Capture en grand">
+    <div className="anim-fade fixed inset-0 z-[55] flex flex-col bg-black/95 text-white" role="dialog" aria-modal="true" aria-label="Screenshot enlarged">
       <div className="flex items-center justify-between gap-2 px-3 pt-[max(env(safe-area-inset-top),8px)]">
         <p className="truncate px-2 text-[15px]">
-          Capture {index + 1}/{n}
+          Screenshot {index + 1}/{n}
           {c.legende ? ` · ${c.legende}` : ""}
         </p>
-        <button type="button" onClick={onClose} aria-label="Fermer" className="flex h-11 w-11 items-center justify-center rounded-full bg-white/10">
+        <button type="button" onClick={onClose} aria-label="Close" className="flex h-11 w-11 items-center justify-center rounded-full bg-white/10">
           <Icon name="close" />
         </button>
       </div>
       <div className="relative flex min-h-0 flex-1 items-center justify-center p-3" onClick={onClose}>
         <div onClick={(e) => e.stopPropagation()} className="flex max-h-full max-w-full items-center justify-center">
-          <CaptureImage path={c.path} alt={c.legende || `Capture ${index + 1}`} className="max-h-[calc(100vh-120px)] max-w-full rounded-[8px] object-contain" />
+          <CaptureImage path={c.path} alt={c.legende || `Screenshot ${index + 1}`} className="max-h-[calc(100vh-120px)] max-w-full rounded-[8px] object-contain" />
         </div>
         {n > 1 && (
           <>
             <button
               type="button"
-              aria-label="Capture précédente"
+              aria-label="Previous screenshot"
               onClick={(e) => {
                 e.stopPropagation();
                 onIndex((index - 1 + n) % n);
@@ -71,7 +71,7 @@ export function Lightbox({
             </button>
             <button
               type="button"
-              aria-label="Capture suivante"
+              aria-label="Next screenshot"
               onClick={(e) => {
                 e.stopPropagation();
                 onIndex((index + 1) % n);

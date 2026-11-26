@@ -38,8 +38,8 @@ export async function requireMember(): Promise<
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return { ok: false, error: "Session expirée : reconnecte-toi.", status: 401 };
+  if (!user) return { ok: false, error: "Session expired: reload the page.", status: 401 };
   const { data: member } = await supabase.from("members").select("id").eq("id", user.id).maybeSingle();
-  if (!member) return { ok: false, error: "Choisis d'abord ton nom dans l'équipe.", status: 403 };
+  if (!member) return { ok: false, error: "Pick your name in the team first.", status: 403 };
   return { ok: true, supabase, userId: user.id };
 }

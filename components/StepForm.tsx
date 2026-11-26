@@ -68,7 +68,7 @@ function Field({ label, htmlFor, hint, children }: { label: string; htmlFor: str
 
 function SuggestHint({ show }: { show: boolean }) {
   if (!show) return null;
-  return <span className="text-[12px] font-medium text-orange">proposé, à vérifier</span>;
+  return <span className="text-[12px] font-medium text-orange">suggested, please check</span>;
 }
 
 export const StepForm = forwardRef<
@@ -165,7 +165,7 @@ export const StepForm = forwardRef<
   const analyze = useCallback(async () => {
     const paths = draftsRef.current.map((d) => d.path).slice(0, MAX_ANALYZE);
     if (!paths.length) {
-      setAnalysis({ state: "error", message: "Ajoute au moins une capture à analyser." });
+      setAnalysis({ state: "error", message: "Add at least one screenshot to analyze." });
       return;
     }
     abort.current?.abort();
@@ -213,21 +213,21 @@ export const StepForm = forwardRef<
       setFields(next);
       setSuggested((s) => new Set([...Array.from(s), ...filled]));
       const n = new Set(filled).size;
-      const more = draftsRef.current.length > MAX_ANALYZE ? ` (${MAX_ANALYZE} premières captures lues)` : "";
+      const more = draftsRef.current.length > MAX_ANALYZE ? ` (first ${MAX_ANALYZE} screenshots read)` : "";
       setAnalysis({
         state: "done",
         message:
           n > 0
-            ? `Claude a rempli ${n} champ${n > 1 ? "s" : ""}. Relis et complète « Ce qu'on fait ».${more}`
-            : `Claude n'a rien trouvé à ajouter : les champs étaient déjà remplis ou illisibles.${more}`,
+            ? `Claude filled ${n} field${n > 1 ? "s" : ""}. Review it and complete "What we did".${more}`
+            : `Claude found nothing to add: the fields were already filled or unreadable.${more}`,
       });
     } catch (e) {
       if (ctrl.signal.aborted) {
-        setAnalysis({ state: "idle", message: "Analyse arrêtée. Tu peux remplir la fiche à la main." });
+        setAnalysis({ state: "idle", message: "Analysis stopped. You can fill in the entry by hand." });
       } else {
         setAnalysis({
           state: "error",
-          message: `${e instanceof Error ? e.message : "Analyse impossible."} La saisie manuelle reste possible.`,
+          message: `${e instanceof Error ? e.message : "Analysis failed."} You can still fill it in by hand.`,
         });
       }
     } finally {
@@ -253,9 +253,9 @@ export const StepForm = forwardRef<
         const paths = await uploadCaptures(init.id, files, (done, total) => setUpload({ done, total }));
         uploaded.current.push(...paths);
         setDrafts((d) => [...d, ...paths.map((path) => ({ key: path, path, legende: "" }))]);
-        toast(`${paths.length} capture${paths.length > 1 ? "s" : ""} ajoutée${paths.length > 1 ? "s" : ""}`, "success");
+        toast(`${paths.length} screenshot${paths.length > 1 ? "s" : ""} added`, "success");
       } catch (e) {
-        toast(e instanceof Error ? e.message : "Envoi impossible", "error", 5000);
+        toast(e instanceof Error ? e.message : "Upload failed", "error", 5000);
       } finally {
         setUpload(null);
       }
@@ -303,7 +303,7 @@ export const StepForm = forwardRef<
       removeFiles(orphans);
       initial.current = snapshot(clean, finalDrafts);
     } catch (e) {
-      toast(`Enregistrement impossible : ${e instanceof Error ? e.message : "erreur"}`, "error", 6000);
+      toast(`Could not save: ${e instanceof Error ? e.message : "error"}`, "error", 6000);
     } finally {
       setSaving(false);
     }
@@ -334,16 +334,16 @@ export const StepForm = forwardRef<
         e.preventDefault();
         save();
       }}
-      aria-label={init.isNew ? "Nouvelle étape" : "Modifier l'étape"}
+      aria-label={init.isNew ? "New step" : "Edit step"}
     >
       {/* Barre du haut */}
       <div className="glass sticky top-[var(--header-h,0px)] z-10 -mx-4 mb-3 flex items-center justify-between gap-2 px-4 py-2 split:static split:mx-0 split:bg-transparent split:px-0 split:backdrop-blur-0">
         <button type="button" onClick={onCancel} className="btn-plain -ml-2">
-          Annuler
+          Cancel
         </button>
-        <h1 className="truncate text-[17px] font-semibold">{init.isNew ? "Nouvelle étape" : "Modifier l'étape"}</h1>
+        <h1 className="truncate text-[17px] font-semibold">{init.isNew ? "New step" : "Edit step"}</h1>
         <button type="submit" disabled={saving || !!upload} className="btn-blue min-w-[110px]">
-          {saving ? "Enregistrement…" : "Enregistrer"}
+          {saving ? "Saving…" : "Save"}
         </button>
       </div>
 
@@ -354,17 +354,17 @@ export const StepForm = forwardRef<
             <>
               <span className="flex flex-1 items-center gap-2 text-[15px]">
                 <span className="h-4 w-4 animate-spin rounded-full border-2 border-blue border-t-transparent" aria-hidden />
-                Claude lit {Math.min(drafts.length, MAX_ANALYZE)} capture{drafts.length > 1 ? "s" : ""}…
+                Claude is reading {Math.min(drafts.length, MAX_ANALYZE)} screenshot{drafts.length > 1 ? "s" : ""}…
               </span>
               <button type="button" onClick={() => abort.current?.abort()} className="btn-danger min-h-[36px] px-3 text-[15px]">
-                <Icon name="stop" className="h-4 w-4" /> Arrêter
+                <Icon name="stop" className="h-4 w-4" /> Stop
               </button>
             </>
           ) : (
             <>
               <span className="flex flex-1 items-center gap-2 text-[15px] text-label3">
                 <Icon name="sparkles" className="h-5 w-5 text-blue" />
-                Claude remplit uniquement les champs vides.
+                Claude only fills empty fields.
               </span>
               <button
                 type="button"
@@ -372,7 +372,7 @@ export const StepForm = forwardRef<
                 disabled={!drafts.length || !!upload}
                 className="btn-tinted min-h-[36px] px-3 text-[15px]"
               >
-                Remplir depuis les captures
+                Fill from screenshots
               </button>
             </>
           )}
@@ -396,13 +396,13 @@ export const StepForm = forwardRef<
               className="ios-input font-mono uppercase"
               value={fields.tcode}
               onChange={(e) => changeTcode(e.target.value)}
-              placeholder="ex. OX18"
+              placeholder="e.g. OX18"
               autoComplete="off"
               spellCheck={false}
               autoFocus={!init.autoAnalyze}
             />
           </Field>
-          <Field label="N°" htmlFor="f-num">
+          <Field label="No." htmlFor="f-num">
             <input
               id="f-num"
               className="ios-input tabular-nums"
@@ -416,14 +416,14 @@ export const StepForm = forwardRef<
             />
           </Field>
         </div>
-        <Field label="Bloc" htmlFor="f-bloc" hint={<SuggestHint show={suggested.has("bloc")} />}>
+        <Field label="Block" htmlFor="f-bloc" hint={<SuggestHint show={suggested.has("bloc")} />}>
           <input
             id="f-bloc"
             list="bloc-options"
             className="ios-input"
             value={fields.bloc}
             onChange={(e) => changeBloc(e.target.value)}
-            placeholder="Choisir ou saisir un bloc"
+            placeholder="Choose or type a block"
           />
           <datalist id="bloc-options">
             {allBlocs.map((b) => (
@@ -431,10 +431,10 @@ export const StepForm = forwardRef<
             ))}
           </datalist>
         </Field>
-        <Field label="Titre" htmlFor="f-titre" hint={<SuggestHint show={suggested.has("titre")} />}>
-          <input id="f-titre" className="ios-input" value={fields.titre} onChange={(e) => set("titre", e.target.value)} placeholder="ex. Affecter le plant au company code" />
+        <Field label="Title" htmlFor="f-titre" hint={<SuggestHint show={suggested.has("titre")} />}>
+          <input id="f-titre" className="ios-input" value={fields.titre} onChange={(e) => set("titre", e.target.value)} placeholder="e.g. Assign plant to company code" />
         </Field>
-        <Field label="Responsable" htmlFor="f-resp">
+        <Field label="Owner" htmlFor="f-resp">
           <select id="f-resp" className="ios-input" value={fields.resp} onChange={(e) => set("resp", e.target.value)}>
             <option value="">—</option>
             {MEMBERS.map((m) => (
@@ -447,10 +447,10 @@ export const StepForm = forwardRef<
         </Field>
         <div className="px-4 py-3">
           <span className="mb-1.5 block text-[13px] font-medium text-label3" id="f-statut-label">
-            Statut
+            Status
           </span>
           <SegmentedControl
-            label="Statut"
+            label="Status"
             size="sm"
             value={fields.statut}
             onChange={(v) => set("statut", v)}
@@ -461,7 +461,7 @@ export const StepForm = forwardRef<
 
       {/* Contenu */}
       <div className="card inset-list mb-4 overflow-hidden">
-        <Field label="Chemin" htmlFor="f-chemin" hint={<SuggestHint show={suggested.has("chemin")} />}>
+        <Field label="Path" htmlFor="f-chemin" hint={<SuggestHint show={suggested.has("chemin")} />}>
           <textarea
             id="f-chemin"
             rows={2}
@@ -471,22 +471,22 @@ export const StepForm = forwardRef<
             placeholder="SPRO › Enterprise Structure › …"
           />
         </Field>
-        <Field label="Ce qu'on fait" htmlFor="f-action" hint={<SuggestHint show={suggested.has("action")} />}>
-          <textarea id="f-action" rows={3} className="ios-input resize-y" value={fields.action} onChange={(e) => set("action", e.target.value)} placeholder="Explique en 1 à 3 phrases ce que tu as configuré et pourquoi." />
+        <Field label="What we did" htmlFor="f-action" hint={<SuggestHint show={suggested.has("action")} />}>
+          <textarea id="f-action" rows={3} className="ios-input resize-y" value={fields.action} onChange={(e) => set("action", e.target.value)} placeholder="Explain in 1 to 3 sentences what you configured and why." />
         </Field>
-        <Field label="Valeurs saisies" htmlFor="f-valeurs" hint={<SuggestHint show={suggested.has("valeurs")} />}>
-          <textarea id="f-valeurs" rows={4} className="ios-input resize-y font-mono text-[14px]" value={fields.valeurs} onChange={(e) => set("valeurs", e.target.value)} placeholder={"Champ : valeur\nPlant : 2BRE"} />
+        <Field label="Values entered" htmlFor="f-valeurs" hint={<SuggestHint show={suggested.has("valeurs")} />}>
+          <textarea id="f-valeurs" rows={4} className="ios-input resize-y font-mono text-[14px]" value={fields.valeurs} onChange={(e) => set("valeurs", e.target.value)} placeholder={"Field: value\nPlant: 2BRE"} />
         </Field>
-        <Field label="Contrôle" htmlFor="f-controle" hint={<SuggestHint show={suggested.has("controle")} />}>
-          <textarea id="f-controle" rows={2} className="ios-input resize-y" value={fields.controle} onChange={(e) => set("controle", e.target.value)} placeholder="Message de la barre d'état, transaction de vérification…" />
+        <Field label="Check" htmlFor="f-controle" hint={<SuggestHint show={suggested.has("controle")} />}>
+          <textarea id="f-controle" rows={2} className="ios-input resize-y" value={fields.controle} onChange={(e) => set("controle", e.target.value)} placeholder="Status bar message, transaction used to verify…" />
         </Field>
-        <Field label="Problème / solution" htmlFor="f-remarque">
-          <textarea id="f-remarque" rows={2} className="ios-input resize-y text-red placeholder:text-red/50" value={fields.remarque} onChange={(e) => set("remarque", e.target.value)} placeholder="Erreur rencontrée et comment tu l'as résolue" />
+        <Field label="Issue / solution" htmlFor="f-remarque">
+          <textarea id="f-remarque" rows={2} className="ios-input resize-y text-red placeholder:text-red/50" value={fields.remarque} onChange={(e) => set("remarque", e.target.value)} placeholder="Error you hit and how you solved it" />
         </Field>
       </div>
 
       {/* Captures */}
-      <h2 className="section-title">Captures ({drafts.length})</h2>
+      <h2 className="section-title">Screenshots ({drafts.length})</h2>
       <div className="space-y-2">
         {drafts.length > 0 && (
           <ul className="card inset-list overflow-hidden">
@@ -495,21 +495,21 @@ export const StepForm = forwardRef<
                 <CaptureImage path={d.path} alt={d.legende || `Capture ${i + 1}`} className="h-16 w-24 shrink-0 rounded-[8px] bg-black/5 object-cover" />
                 <div className="min-w-0 flex-1">
                   <label htmlFor={`leg-${d.key}`} className="text-[12px] text-label3">
-                    Capture {i + 1} · légende
+                    Screenshot {i + 1} · caption
                   </label>
                   <input
                     id={`leg-${d.key}`}
                     className="ios-input mt-0.5 py-2 text-[15px]"
                     value={d.legende}
                     onChange={(e) => setDrafts((list) => list.map((x) => (x.key === d.key ? { ...x, legende: e.target.value } : x)))}
-                    placeholder="ex. Écran de sauvegarde"
+                    placeholder="e.g. Save screen"
                   />
                 </div>
                 <div className="flex shrink-0 flex-col">
-                  <button type="button" onClick={() => move(i, -1)} disabled={i === 0} aria-label={`Monter la capture ${i + 1}`} className="flex h-9 w-11 items-center justify-center text-blue disabled:text-label3/40">
+                  <button type="button" onClick={() => move(i, -1)} disabled={i === 0} aria-label={`Move screenshot ${i + 1} up`} className="flex h-9 w-11 items-center justify-center text-blue disabled:text-label3/40">
                     <Icon name="chevron-up" />
                   </button>
-                  <button type="button" onClick={() => move(i, 1)} disabled={i === drafts.length - 1} aria-label={`Descendre la capture ${i + 1}`} className="flex h-9 w-11 items-center justify-center text-blue disabled:text-label3/40">
+                  <button type="button" onClick={() => move(i, 1)} disabled={i === drafts.length - 1} aria-label={`Move screenshot ${i + 1} down`} className="flex h-9 w-11 items-center justify-center text-blue disabled:text-label3/40">
                     <Icon name="chevron-down" />
                   </button>
                 </div>
@@ -518,16 +518,16 @@ export const StepForm = forwardRef<
                   onClick={() => setDrafts((list) => list.filter((x) => x.key !== d.key))}
                   className="min-h-[44px] shrink-0 px-2 text-[15px] text-red"
                 >
-                  Retirer
+                  Remove
                 </button>
               </li>
             ))}
           </ul>
         )}
-        <AddCapturesZone target="form" onFiles={addFiles} progress={upload} label={drafts.length ? "+ Ajouter d'autres captures" : "+ Ajouter des captures"} />
+        <AddCapturesZone target="form" onFiles={addFiles} progress={upload} label={drafts.length ? "+ Add more screenshots" : "+ Add screenshots"} />
       </div>
 
-      <p className="mt-4 px-4 text-center text-[13px] text-label3">Ctrl/⌘ + S pour enregistrer · Échap pour annuler</p>
+      <p className="mt-4 px-4 text-center text-[13px] text-label3">Ctrl/⌘ + S to save · Esc to cancel</p>
     </form>
   );
 });

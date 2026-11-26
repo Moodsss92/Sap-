@@ -3,23 +3,23 @@ import { STATUT_LABEL, type Capture, type Step } from "./types";
 
 export function stepToText(step: Step, captures: Capture[] = []): string {
   const lines: string[] = [];
-  lines.push(`${step.num ? step.num + " · " : ""}${step.titre || "(sans titre)"}`);
+  lines.push(`${step.num ? step.num + " · " : ""}${step.titre || "(untitled)"}`);
   const field = (label: string, value: string) => {
-    if (value.trim()) lines.push(`${label} : ${value.includes("\n") ? "\n  " + value.split("\n").join("\n  ") : value}`);
+    if (value.trim()) lines.push(`${label}: ${value.includes("\n") ? "\n  " + value.split("\n").join("\n  ") : value}`);
   };
-  field("Bloc", step.bloc);
-  field("Responsable", step.resp);
-  field("Statut", STATUT_LABEL[step.statut]);
+  field("Block", step.bloc);
+  field("Owner", step.resp);
+  field("Status", STATUT_LABEL[step.statut]);
   field("Transaction", step.tcode);
-  field("Chemin", step.chemin);
-  field("Ce qu'on fait", step.action);
-  field("Valeurs", step.valeurs);
-  field("Contrôle", step.controle);
-  field("Problème / solution", step.remarque);
+  field("Path", step.chemin);
+  field("What we did", step.action);
+  field("Values", step.valeurs);
+  field("Check", step.controle);
+  field("Issue / solution", step.remarque);
   if (captures.length) {
     lines.push(
-      `Captures (${captures.length}) : ` +
-        captures.map((c, i) => `${i + 1}${c.legende ? " " + c.legende : ""}`).join(" ; "),
+      `Screenshots (${captures.length}): ` +
+        captures.map((c, i) => `${i + 1}${c.legende ? " " + c.legende : ""}`).join("; "),
     );
   }
   return lines.join("\n");
@@ -28,7 +28,7 @@ export function stepToText(step: Step, captures: Capture[] = []): string {
 export function journalToText(
   steps: Step[],
   capturesByStep: Map<string, Capture[]>,
-  title = "Journal de configuration SAP · Philo Televisions",
+  title = "SAP configuration log · Philo Televisions",
 ): string {
   const out: string[] = [title, "=".repeat(title.length), ""];
   let current: string | null = null;

@@ -38,19 +38,19 @@ export function ExportSheet({
     {
       kind: "team-docx",
       icon: "doc",
-      title: "Dossier complet de l'équipe (Word)",
-      detail: `Les fiches de tout le monde rassemblées dans l'ordre du business case, avec qui a fait quoi, l'avancement par bloc et les pièces manquantes · ${s(teamCount, "étape")}, ${s(teamCaptures, "capture")}`,
+      title: "Full team file (Word)",
+      detail: `Everyone's entries gathered in business-case order, with who did what, progress by block and missing pieces · ${s(teamCount, "step")}, ${s(teamCaptures, "screenshot")}`,
     },
     {
       kind: "team-zip",
       icon: "image",
-      title: "Captures de l'équipe (ZIP)",
-      detail: "Un dossier par bloc, un sous-dossier par étape, avec les captures numérotées et la fiche texte",
+      title: "Team screenshots (ZIP)",
+      detail: "One folder per block, one subfolder per step, with numbered screenshots and the text entry",
     },
   ];
   const view: Option[] = [
-    { kind: "view-docx", icon: "doc", title: "Vue actuelle en Word", detail: `${scopeLabel} avec les filtres en cours · ${s(viewCount, "étape")}` },
-    { kind: "view-text", icon: "copy", title: "Copier la vue actuelle en texte", detail: "Dans le presse-papiers, pour un mail ou Teams" },
+    { kind: "view-docx", icon: "doc", title: "Current view in Word", detail: `${scopeLabel} with the current filters · ${s(viewCount, "step")}` },
+    { kind: "view-text", icon: "copy", title: "Copy the current view as text", detail: "To the clipboard, for an email or Teams" },
   ];
 
   const group = (title: string, options: Option[]) => (
@@ -79,11 +79,11 @@ export function ExportSheet({
   );
 
   return (
-    <BottomSheet open={open} title="Exporter" onClose={onClose}>
+    <BottomSheet open={open} title="Export" onClose={onClose}>
       <div className="px-4 pt-3">
-        <h2 className="text-center text-[22px] font-bold">Exporter</h2>
-        <p className="mt-1 text-center text-[14px] text-label3">Rassemble le travail de chacun en un seul dossier.</p>
-        <h3 className="section-title mt-4">Document final</h3>
+        <h2 className="text-center text-[22px] font-bold">Export</h2>
+        <p className="mt-1 text-center text-[14px] text-label3">Bring everyone&apos;s work together in one file.</p>
+        <h3 className="section-title mt-4">Final document</h3>
         <div className="card inset-list overflow-hidden">
           <button
             type="button"
@@ -94,19 +94,19 @@ export function ExportSheet({
               <Icon name="sparkles" className="h-6 w-6" />
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block text-[17px] font-semibold">Documentation finale (Word)</span>
+              <span className="block text-[17px] font-semibold">Final documentation (Word)</span>
               <span className="block text-[13px] leading-snug text-label3">
-                Le travail de chacun regroupé en un document cohérent : Claude rédige la synthèse, l&apos;introduction de chaque bloc et
-                les points à vérifier. Vos fiches restent telles quelles.
+                Everyone&apos;s work combined into one coherent document: Claude writes the summary, each block&apos;s
+                introduction and the points to check. Your entries stay exactly as written.
               </span>
             </span>
             <Icon name="chevron-right" className="h-4 w-4 shrink-0 text-label3" />
           </button>
           <label className="flex min-h-[52px] cursor-pointer items-center gap-3 px-4">
             <span className="min-w-0 flex-1">
-              <span className="block text-[16px]">Seulement les étapes faites</span>
+              <span className="block text-[16px]">Only completed steps</span>
               <span className="block text-[13px] text-label3">
-                {onlyDone ? `${s(doneCount, "étape")} sur ${teamCount}` : `Toutes les étapes (${teamCount})`}
+                {onlyDone ? `${s(doneCount, "step")} of ${teamCount}` : `All steps (${teamCount})`}
               </span>
             </span>
             <input type="checkbox" className="peer sr-only" checked={onlyDone} onChange={(e) => setOnlyDone(e.target.checked)} />
@@ -116,10 +116,10 @@ export function ExportSheet({
             />
           </label>
         </div>
-        {group("Toute l'équipe, sans réécriture", team)}
-        {group("Vue actuelle", view)}
+        {group("Whole team, no rewriting", team)}
+        {group("Current view", view)}
         <button type="button" className="btn-plain mt-2 w-full" onClick={onClose}>
-          Annuler
+          Cancel
         </button>
       </div>
     </BottomSheet>

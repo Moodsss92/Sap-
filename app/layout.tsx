@@ -2,8 +2,8 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Journal SAP · Philo Televisions",
-  description: "Journal de configuration SAP S/4HANA (MM/SD) partagé par l'équipe.",
+  title: "SAP Log · Philo Televisions",
+  description: "Shared SAP S/4HANA (MM/SD) configuration log for the team.",
 };
 
 export const viewport: Viewport = {
@@ -18,9 +18,9 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="fr">
+    <html lang="en">
       <head>
-        {/* Inter en repli quand SF Pro n'est pas disponible (Windows, Android) */}
+        {/* Inter as a fallback when SF Pro is unavailable (Windows, Android) */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
         {/* eslint-disable-next-line @next/next/no-page-custom-font */}
