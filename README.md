@@ -79,19 +79,19 @@ npm i
 
 ### 3. Variables d'environnement
 
+Le projet Supabase de l'équipe (`sap`, région Paris) est déjà inscrit dans `lib/env.ts`. Son URL et sa clé `anon` sont publiques par conception : la sécurité repose sur les règles RLS de la base. **Aucune variable Supabase n'est donc nécessaire.**
+
+| Variable | Rôle | Obligatoire ? |
+|---|---|---|
+| `ANTHROPIC_API_KEY` | lecture des captures et documentation finale par Claude (serveur uniquement) | oui, pour les fonctions Claude |
+| `ANTHROPIC_MODEL` | modèle utilisé, par défaut `claude-sonnet-5-5` | non |
+| `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` | pointer vers un autre projet Supabase | non |
+
 ```bash
 cp .env.example .env.local
 ```
 
-| Variable | Où la trouver | Exposée au navigateur ? |
-|---|---|---|
-| `NEXT_PUBLIC_SUPABASE_URL` | Supabase › Project Settings › API | oui |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | idem (clé `anon` / publishable) | oui |
-| `SUPABASE_SERVICE_ROLE_KEY` | idem (clé `service_role`) | **non**, serveur uniquement |
-| `ANTHROPIC_API_KEY` | console.anthropic.com › API Keys | **non**, serveur uniquement |
-| `ANTHROPIC_MODEL` (facultatif) | par défaut `claude-sonnet-5-5` | non |
-
-Les clés Anthropic et `service_role` ne servent que dans `app/api/analyze/route.ts`. Cette route vérifie d'abord que l'appelant est connecté et membre de l'équipe.
+La clé Anthropic n'est utilisée que dans les routes `app/api/*`. Celles-ci vérifient d'abord que l'appelant est connecté et membre de l'équipe ; elles lisent les données avec la session de l'utilisateur, donc sous les règles RLS.
 
 ## Lancer en local
 
@@ -106,14 +106,16 @@ Autres commandes : `npm run build` (build de production), `npm run lint`, `npm r
 ## Déploiement sur Vercel
 
 1. Importe le dépôt `Moodsss92/Sap-` dans Vercel (**Add New › Project**). Vercel détecte Next.js, rien d'autre à régler.
-2. Ajoute les variables d'environnement ci-dessus dans **Settings › Environment Variables**.
-3. Déploie, puis ajoute l'URL obtenue dans Supabase : Site URL et Redirect URL `…/auth/callback`.
+2. Ajoute `ANTHROPIC_API_KEY` dans **Settings › Environment Variables** (Production et Preview), puis redéploie.
+3. Dans Supabase › Authentication › URL Configuration, ajoute l'URL obtenue : Site URL, et Redirect URL `…/auth/callback`.
+
+Production actuelle : https://sap-flame.vercel.app
 
 `/api/analyze` déclare `maxDuration = 60` s : la lecture de 5 captures prend en général 10 à 30 s. `/api/compose` déclare `maxDuration = 120` s pour relire tout le journal, ce que le plan gratuit de Vercel accepte quand Fluid Compute est activé (réglage par défaut des nouveaux projets).
 
 ## Lecture des captures par Claude
 
-- Au maximum **5 images** sont envoyées par analyse. Le serveur les télécharge depuis le Storage privé, puis appelle l'API Anthropic avec le prompt du business case et le dictionnaire `lib/tcodes.ts`.
+- Au maximum **5 images** sont envoyées par analyse. Le serveur les télécharge depuis le Storage privé, avec la session de l'utilisateur,, puis appelle l'API Anthropic avec le prompt du business case et le dictionnaire `lib/tcodes.ts`.
 - La réponse JSON est validée avec **zod**. Si le JSON est invalide, le client reçoit une erreur claire.
 - Seuls les **champs vides** sont remplis. Ils portent le hint « proposé, à vérifier ».
 - Le bouton **Arrêter** annule la requête. **Remplir depuis les captures** relance l'analyse sur une fiche existante.

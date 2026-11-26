@@ -2,7 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { BLOCS, matchBloc } from "@/lib/blocs";
-import { getAdminSupabase, requireMember } from "@/lib/supabase/server";
+import { requireMember } from "@/lib/supabase/server";
 import { normalizeTcode, tcodesForPrompt } from "@/lib/tcodes";
 
 export const runtime = "nodejs";
@@ -97,10 +97,11 @@ export async function POST(request: NextRequest) {
   const paths = body.paths.slice(0, MAX_IMAGES);
 
   // 3. Téléchargement des captures depuis le Storage privé
-  const admin = getAdminSupabase();
+  // (avec la session de l'utilisateur : les règles RLS autorisent les membres à les lire)
+  const storage = auth.supabase.storage;
   const images: Anthropic.Beta.BetaImageBlockParam[] = [];
   for (const path of paths) {
-    const { data, error } = await admin.storage.from("captures").download(path);
+    const { data, error } = await storage.from("captures").download(path);
     if (error || !data) return fail(`Capture introuvable dans le Storage (${path}).`, 404);
     const buffer = Buffer.from(await data.arrayBuffer());
     if (buffer.byteLength > 5 * 1024 * 1024) {

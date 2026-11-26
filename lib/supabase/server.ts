@@ -1,14 +1,15 @@
 import "server-only";
 import { createServerClient } from "@supabase/ssr";
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
+import { SUPABASE_ANON_KEY, SUPABASE_URL } from "../env";
 
 /** Client lié à la session de l'utilisateur (cookies). */
 export function getServerSupabase(): SupabaseClient {
   const cookieStore = cookies();
   return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    SUPABASE_URL,
+    SUPABASE_ANON_KEY,
     {
       cookies: {
         getAll() {
@@ -26,13 +27,6 @@ export function getServerSupabase(): SupabaseClient {
   );
 }
 
-/** Client « service role » : serveur uniquement, après vérification de l'utilisateur. */
-export function getAdminSupabase(): SupabaseClient {
-  return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
-    auth: { persistSession: false, autoRefreshToken: false },
-  });
-}
-
 /**
  * Vérifie que l'appelant est connecté et membre de l'équipe.
  * Renvoie le client lié à sa session, ou un message d'erreur et un code HTTP.
@@ -40,10 +34,6 @@ export function getAdminSupabase(): SupabaseClient {
 export async function requireMember(): Promise<
   { ok: true; supabase: SupabaseClient; userId: string } | { ok: false; error: string; status: number }
 > {
-  const missing = ["NEXT_PUBLIC_SUPABASE_URL", "NEXT_PUBLIC_SUPABASE_ANON_KEY", "SUPABASE_SERVICE_ROLE_KEY"].filter(
-    (k) => !process.env[k],
-  );
-  if (missing.length) return { ok: false, error: `Variables manquantes sur le serveur : ${missing.join(", ")}.`, status: 500 };
   const supabase = getServerSupabase();
   const {
     data: { user },
