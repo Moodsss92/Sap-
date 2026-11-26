@@ -6,6 +6,8 @@ L'interface est en **anglais**. Chaque étape tient en **4 champs** : titre, T-c
 
 **Blocs** : l'équipe crée ses blocs (« + New block »), chacun avec un nom. Ils sont numérotés automatiquement dans l'ordre de création (Block 1, Block 2…). Chaque étape est rattachée à un bloc et numérotée dedans (1.1, 1.2…, puis 2.1…). La liste, les exports Word / ZIP / texte et la documentation finale suivent l'ordre des blocs. Un bloc se renomme à tout moment ; il ne se supprime que s'il est vide.
 
+**Réorganiser** : dans l'onglet « Whole log », le bouton **Reorder** affiche des flèches ↑ ↓ sur chaque étape. Une étape échange sa place avec sa voisine ; en haut ou en bas d'un bloc, elle passe dans le bloc précédent ou suivant. Les numéros sont recalculés (1.1, 1.2…) et le nouvel ordre est partagé avec toute l'équipe. Le mode n'est disponible que sans recherche ni filtre de statut.
+
 ## Fonctionnalités
 
 - **Accès direct, sans e-mail ni mot de passe** : on ouvre le site et on choisit son nom (« Qui es-tu ? »). Chaque navigateur reçoit une session anonyme Supabase, gardée ensuite ; le nom se change avec « Changer ».

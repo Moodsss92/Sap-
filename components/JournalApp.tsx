@@ -60,6 +60,8 @@ export function JournalApp() {
   const formRef = useRef<StepFormHandle>(null);
   // Bloc sur lequel on travaille : présélectionné pour les nouvelles étapes
   const [activeBlockId, setActiveBlockId] = useState<string | null>(null);
+  // Mode « Reorder » (Whole log uniquement) : flèches ↑ ↓ sur chaque étape
+  const [reorder, setReorder] = useState(false);
   const [blockSheet, setBlockSheet] = useState<
     { mode: "create"; resolve?: (b: Block | null) => void } | { mode: "rename"; block: Block } | null
   >(null);
@@ -162,6 +164,62 @@ export function JournalApp() {
     () => new Promise<Block | null>((resolve) => setBlockSheet({ mode: "create", resolve })),
     [],
   );
+
+  // ---------- Réorganisation (Whole log) ----------
+  const canReorder = tab === "all" && !filters.q && !filters.statut;
+
+  /** Ordre actuel : pour chaque bloc, la liste ordonnée de ses étapes. */
+  const blockOrder = () =>
+    blocks.map((b) => ({ block: b, ids: steps.filter((st) => st.block_id === b.id).map((st) => st.id) }));
+
+  const canMove = (step: Step, dir: -1 | 1): boolean => {
+    const order = blockOrder();
+    const gi = order.findIndex((g) => g.block.id === step.block_id);
+    if (gi < 0) return false;
+    const i = order[gi].ids.indexOf(step.id);
+    const j = i + dir;
+    if (j >= 0 && j < order[gi].ids.length) return true;
+    return gi + dir >= 0 && gi + dir < order.length; // passe au bloc voisin
+  };
+
+  /**
+   * ↑ / ↓ : échange avec l'étape voisine du même bloc. En haut (ou en bas) d'un
+   * bloc, l'étape passe à la fin du bloc précédent (ou au début du suivant).
+   * Les blocs touchés sont renumérotés 1.1, 1.2…
+   */
+  const moveStep = async (step: Step, dir: -1 | 1) => {
+    const order = blockOrder();
+    const gi = order.findIndex((g) => g.block.id === step.block_id);
+    if (gi < 0) return;
+    const ids = order[gi].ids;
+    const i = ids.indexOf(step.id);
+    const j = i + dir;
+    let target = gi;
+    if (j >= 0 && j < ids.length) {
+      [ids[i], ids[j]] = [ids[j], ids[i]];
+    } else {
+      target = gi + dir;
+      if (target < 0 || target >= order.length) return;
+      ids.splice(i, 1);
+      if (dir < 0) order[target].ids.push(step.id);
+      else order[target].ids.unshift(step.id);
+    }
+    const layout = Array.from(new Set([gi, target])).flatMap((k) =>
+      order[k].ids.map((id, idx) => ({
+        id,
+        block_id: order[k].block.id,
+        num: `${order[k].block.num}.${idx + 1}`,
+        bloc: blockLabel(order[k].block),
+      })),
+    );
+    try {
+      await journal.applyLayout(layout);
+      const now = layout.find((l) => l.id === step.id);
+      if (now) toast(target === gi ? `Moved to ${now.num}` : `Moved to Block ${order[target].block.num} · ${now.num}`, "success", 1800);
+    } catch (e) {
+      toast(e instanceof Error ? `Could not move: ${e.message}` : "Could not move.", "error", 6000);
+    }
+  };
 
   const removeBlock = async (b: Block) => {
     const ok = await confirm({
@@ -561,6 +619,14 @@ export function JournalApp() {
             onAddToBlock={(b) => newStep(b.id)}
             onRenameBlock={(b) => setBlockSheet({ mode: "rename", block: b })}
             onDeleteBlock={removeBlock}
+            reorder={{
+              available: tab === "all",
+              enabled: reorder && canReorder,
+              blockedReason: canReorder ? null : "Clear the search and status filter to reorder.",
+              onToggle: () => setReorder((r) => !r),
+              canMove,
+              onMove: moveStep,
+            }}
             capturesByStep={capturesByStep}
             filters={filters}
             onFilters={setFilters}

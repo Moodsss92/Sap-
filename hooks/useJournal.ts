@@ -194,6 +194,39 @@ export function useJournal(enabled: boolean) {
     [captures],
   );
 
+  /**
+   * Enregistre un nouvel ordre : chaque entrée donne le bloc et le numéro d'une
+   * étape. Seules les étapes qui changent sont envoyées (mise à jour optimiste).
+   */
+  const applyLayout = useCallback(
+    async (layout: { id: string; block_id: string | null; num: string; bloc: string }[]) => {
+      const current = new Map(steps.map((s) => [s.id, s]));
+      const changed = layout.filter((l) => {
+        const s = current.get(l.id);
+        return s && (s.num !== l.num || s.block_id !== l.block_id);
+      });
+      if (!changed.length) return;
+      setSteps((prev) =>
+        prev.map((s) => {
+          const l = changed.find((x) => x.id === s.id);
+          return l ? { ...s, num: l.num, block_id: l.block_id, bloc: l.bloc } : s;
+        }),
+      );
+      const supabase = getSupabase();
+      const results = await Promise.all(
+        changed.map((l) =>
+          supabase.from("steps").update({ num: l.num, block_id: l.block_id, bloc: l.bloc }).eq("id", l.id),
+        ),
+      );
+      const failed = results.find((r) => r.error);
+      if (failed?.error) {
+        await reload();
+        throw new Error(failed.error.message);
+      }
+    },
+    [steps, reload],
+  );
+
   // ---------- Blocs ----------
 
   const createBlock = useCallback(async (name: string): Promise<Block> => {
@@ -220,6 +253,7 @@ export function useJournal(enabled: boolean) {
   return {
     steps: sortedSteps,
     blocks: sortedBlocks,
+    applyLayout,
     createBlock,
     renameBlock,
     deleteBlock,

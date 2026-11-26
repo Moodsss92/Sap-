@@ -5,6 +5,17 @@ import { NO_BLOC } from "@/lib/blocs";
 import { STATUTS, STATUT_LABEL, type Block, type Capture, type Statut, type Step } from "@/lib/types";
 import { Icon, StatutBadge, TcodeBadge } from "./ui/Badges";
 
+export interface ReorderControls {
+  /** Bouton « Reorder » affiché (onglet Whole log). */
+  available: boolean;
+  enabled: boolean;
+  /** Raison pour laquelle le mode est indisponible (filtres actifs), sinon null. */
+  blockedReason: string | null;
+  onToggle: () => void;
+  canMove: (step: Step, dir: -1 | 1) => boolean;
+  onMove: (step: Step, dir: -1 | 1) => void;
+}
+
 export interface ListFilters {
   q: string;
   statut: Statut | "";
@@ -17,6 +28,7 @@ export function StepList({
   onAddToBlock,
   onRenameBlock,
   onDeleteBlock,
+  reorder,
   capturesByStep,
   filters,
   onFilters,
@@ -30,6 +42,7 @@ export function StepList({
   onAddToBlock: (block: Block) => void;
   onRenameBlock: (block: Block) => void;
   onDeleteBlock: (block: Block) => void;
+  reorder: ReorderControls;
   capturesByStep: Map<string, Capture[]>;
   filters: ListFilters;
   onFilters: (f: ListFilters) => void;
@@ -98,8 +111,29 @@ export function StepList({
               </option>
             ))}
           </select>
+          {reorder.available && (
+            <button
+              type="button"
+              onClick={reorder.onToggle}
+              disabled={!!reorder.blockedReason}
+              title={reorder.blockedReason ?? (reorder.enabled ? "Finish reordering" : "Move steps up or down")}
+              aria-pressed={reorder.enabled}
+              className={`min-h-[40px] shrink-0 rounded-[10px] px-3 text-[15px] font-semibold transition disabled:opacity-40 ${
+                reorder.enabled ? "bg-blue text-white" : "bg-card text-blue"
+              }`}
+            >
+              {reorder.enabled ? "Done" : "Reorder"}
+            </button>
+          )}
         </div>
       </div>
+
+      {reorder.enabled && (
+        <p className="mb-3 rounded-[10px] bg-blue/10 px-3 py-2 text-[13px] text-blue">
+          Use ↑ ↓ to move a step. At the top or bottom of a block, it moves into the block above or below. Numbers update for
+          everyone.
+        </p>
+      )}
 
       {loading ? (
         <div className="space-y-2" aria-label="Loading">
@@ -178,7 +212,7 @@ export function StepList({
                       const nCap = capturesByStep.get(s.id)?.length ?? 0;
                       const active = s.id === selectedId;
                       return (
-                        <li key={s.id}>
+                        <li key={s.id} className="flex items-stretch">
                           <button
                             type="button"
                             onClick={() => onSelect(s.id)}
@@ -203,6 +237,28 @@ export function StepList({
                             </span>
                             <StatutBadge statut={s.statut} />
                           </button>
+                          {reorder.enabled && s.block_id && (
+                            <span className="flex shrink-0 flex-col justify-center border-l-hair border-sep pr-1">
+                              <button
+                                type="button"
+                                onClick={() => reorder.onMove(s, -1)}
+                                disabled={!reorder.canMove(s, -1)}
+                                aria-label={`Move ${s.num} up`}
+                                className="flex h-8 w-11 items-center justify-center text-blue disabled:text-label3/30"
+                              >
+                                <Icon name="chevron-up" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => reorder.onMove(s, 1)}
+                                disabled={!reorder.canMove(s, 1)}
+                                aria-label={`Move ${s.num} down`}
+                                className="flex h-8 w-11 items-center justify-center text-blue disabled:text-label3/30"
+                              >
+                                <Icon name="chevron-down" />
+                              </button>
+                            </span>
+                          )}
                         </li>
                       );
                     })}
