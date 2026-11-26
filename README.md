@@ -6,7 +6,7 @@ Pour chaque étape : transaction, chemin SPRO, ce qu'on a fait, valeurs saisies,
 
 ## Fonctionnalités
 
-- Connexion par **magic link** (Supabase Auth), choix « Qui es-tu ? » dans une bottom sheet.
+- **Accès direct, sans e-mail ni mot de passe** : on ouvre le site et on choisit son nom (« Qui es-tu ? »). Chaque navigateur reçoit une session anonyme Supabase, gardée ensuite ; le nom se change avec « Changer ».
 - **Un espace par personne** + « Tout le journal », dans un segmented control collé en haut.
 - Liste groupée par bloc, avec la progression « x/y faites », la recherche plein texte et des filtres par bloc et par statut.
 - **+ Nouvelle étape depuis une capture** : glisser-déposer de plusieurs images, sélection de fichiers ou Ctrl/⌘ + V. Claude remplit ensuite les champs vides.
@@ -26,8 +26,6 @@ Pour chaque étape : transaction, chemin SPRO, ce qu'on a fait, valeurs saisies,
 ├── app/
 │   ├── layout.tsx, globals.css      Thème iOS (variables clair / sombre)
 │   ├── page.tsx                     Application (client)
-│   ├── login/page.tsx               Connexion par magic link
-│   ├── auth/callback/route.ts       Échange du code Supabase → session
 │   ├── api/analyze/route.ts         Lecture des captures par Claude (serveur uniquement)
 │   └── api/compose/route.ts         Texte de liaison de la documentation finale (serveur uniquement)
 ├── components/
@@ -72,10 +70,9 @@ npm i
    Avec la CLI Supabase, tu peux aussi lancer `supabase db push`.
 3. Facultatif : exécute `supabase/seed.sql` pour créer les étapes 1.1 à 1.7 (responsable : Moad).
 4. Vérifie que le bucket `captures` existe et qu'il est **privé** (Storage › Buckets). Le script le crée ; sinon, crée-le à la main avec le nom `captures`, sans cocher « Public ».
-5. Dans **Authentication › URL Configuration** :
-   - **Site URL** : `http://localhost:3000` en local, puis l'URL Vercel ;
-   - **Redirect URLs** : ajoute `http://localhost:3000/auth/callback` et `https://<ton-app>.vercel.app/auth/callback`.
-6. Recommandé : une fois les 4 comptes créés, désactive les nouvelles inscriptions (**Authentication › Sign In / Providers › Allow new users to sign up**). Sinon, toute personne qui connaît l'URL peut se connecter et rejoindre le journal.
+5. Dans **Authentication › Sign In / Providers**, active **Allow anonymous sign-ins** : c'est ce qui permet d'entrer sans e-mail. Sans ce réglage, l'app affiche un écran qui l'explique.
+
+   ⚠️ Toute personne qui a le lien du site peut entrer et modifier le journal. Ne le partage qu'avec l'équipe.
 
 ### 3. Variables d'environnement
 
@@ -99,7 +96,7 @@ La clé Anthropic n'est utilisée que dans les routes `app/api/*`. Celles-ci vé
 npm run dev
 ```
 
-Ouvre http://localhost:3000, saisis ton e-mail, puis clique sur le lien reçu et choisis ton nom.
+Ouvre http://localhost:3000 et choisis ton nom.
 
 Autres commandes : `npm run build` (build de production), `npm run lint`, `npm run typecheck`.
 
@@ -107,7 +104,6 @@ Autres commandes : `npm run build` (build de production), `npm run lint`, `npm r
 
 1. Importe le dépôt `Moodsss92/Sap-` dans Vercel (**Add New › Project**). Vercel détecte Next.js, rien d'autre à régler.
 2. Ajoute `ANTHROPIC_API_KEY` dans **Settings › Environment Variables** (Production et Preview), puis redéploie.
-3. Dans Supabase › Authentication › URL Configuration, ajoute l'URL obtenue : Site URL, et Redirect URL `…/auth/callback`.
 
 Production actuelle : https://sap-flame.vercel.app
 

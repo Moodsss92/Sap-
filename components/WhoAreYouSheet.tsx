@@ -36,7 +36,7 @@ export function WhoAreYouSheet({
       <div className="px-4 pt-3">
         <h2 className="text-center text-[22px] font-bold">Qui es-tu ?</h2>
         <p className="mt-1 text-center text-[15px] text-label3">
-          Ton nom sert à créer ton espace et à signer tes modifications.
+          Choisis ton nom pour entrer dans le journal. Il signe tes fiches ; tu pourras le changer à tout moment.
         </p>
         <div className="card inset-list mt-5 overflow-hidden">
           {MEMBERS.map((name) => (

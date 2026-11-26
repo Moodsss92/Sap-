@@ -9,7 +9,6 @@ import { copyToClipboard, journalToText, stepToText } from "@/lib/exportText";
 import { imagesFromDataTransfer } from "@/lib/images";
 import { nextNum } from "@/lib/numbering";
 import { copyFiles, uploadCaptures } from "@/lib/storage";
-import { getSupabase } from "@/lib/supabase/client";
 import { EMPTY_FIELDS, STATUT_LABEL, type ComposedDoc, type DraftCapture, type MemberName, type Statut, type Step, type StepFields } from "@/lib/types";
 import { ExportSheet, type ExportKind } from "./ExportSheet";
 import { HelpBanner } from "./HelpBanner";
@@ -44,7 +43,7 @@ function stepFields(s: Step): StepFields {
 
 export function JournalApp() {
   const toast = useToast();
-  const { user, loading: sessionLoading } = useSession();
+  const { user, loading: sessionLoading, error: sessionError } = useSession();
   const { me, loaded: membersLoaded, chooseName, nameOf } = useMembers(user?.id);
   const journal = useJournal(!!me);
   const { steps, capturesByStep } = journal;
@@ -428,18 +427,43 @@ export function JournalApp() {
     }
   };
 
-  const signOut = async () => {
-    if (!(await leaveForm())) return;
-    await getSupabase().auth.signOut();
-    window.location.href = "/login";
-  };
-
   // ---------- Rendu ----------
   if (sessionLoading || (user && !membersLoaded)) {
     return (
       <div className="flex min-h-screen items-center justify-center" aria-label="Chargement">
         <span className="h-6 w-6 animate-spin rounded-full border-2 border-blue border-t-transparent" />
       </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <main className="flex min-h-screen items-center justify-center px-4 py-10">
+        <div className="card w-full max-w-[520px] p-6">
+          <h1 className="text-[22px] font-bold">Accès impossible pour l&apos;instant</h1>
+          {sessionError && /anonymous/i.test(sessionError) ? (
+            <>
+              <p className="mt-2 text-[15px] text-label3">
+                L&apos;accès direct (sans e-mail) n&apos;est pas encore activé dans Supabase.
+              </p>
+              <ol className="mt-3 list-decimal space-y-1 pl-5 text-[15px]">
+                <li>Supabase › Authentication › Sign In / Providers.</li>
+                <li>
+                  Active <strong>Allow anonymous sign-ins</strong> et enregistre.
+                </li>
+                <li>Recharge cette page.</li>
+              </ol>
+            </>
+          ) : (
+            <p className="mt-2 text-[15px] text-label3">
+              Impossible de joindre la base de données{sessionError ? ` (${sessionError})` : ""}. Recharge la page dans un instant.
+            </p>
+          )}
+          <button type="button" className="btn-blue mt-5 w-full" onClick={() => window.location.reload()}>
+            Recharger
+          </button>
+        </div>
+      </main>
     );
   }
 
@@ -487,9 +511,6 @@ export function JournalApp() {
               <span className="hidden text-[15px] text-label3 sm:inline">{me.name}</span>
               <button type="button" onClick={() => setWhoOpen(true)} aria-label={`Changer de nom (actuellement ${me.name})`} className="btn-plain px-2 text-[15px]">
                 Changer
-              </button>
-              <button type="button" onClick={signOut} aria-label="Se déconnecter" title="Se déconnecter" className="btn-plain px-2">
-                <Icon name="logout" className="h-[18px] w-[18px]" />
               </button>
             </div>
           </div>
