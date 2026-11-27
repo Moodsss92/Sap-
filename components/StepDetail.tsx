@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
+import { MD_ETAT_LABEL, mdTypeLabel, type MasterData } from "@/lib/masterData";
 import { STATUTS, type Capture, type Statut, type Step } from "@/lib/types";
 import { AddCapturesZone } from "./AddCapturesZone";
 import { CaptureImage } from "./CaptureImage";
@@ -38,6 +39,9 @@ export function StepDetail({
   uploadProgress,
   authorName,
   updaterName,
+  linkedMd,
+  onAddMd,
+  onEditMd,
 }: {
   step: Step;
   captures: Capture[];
@@ -55,6 +59,9 @@ export function StepDetail({
   uploadProgress: { done: number; total: number } | null;
   authorName?: string;
   updaterName?: string;
+  linkedMd: MasterData[];
+  onAddMd: () => void;
+  onEditMd: (row: MasterData) => void;
 }) {
   const [lightbox, setLightbox] = useState<number | null>(null);
 
@@ -129,6 +136,38 @@ export function StepDetail({
         {updaterName ? ` by ${updaterName}` : ""}
         {authorName ? ` · created by ${authorName}` : ""}
       </p>
+
+      {/* Master data créées ou copiées pendant cette étape */}
+      <h2 className="section-title">Master data ({linkedMd.length})</h2>
+      <div className="card mb-6 overflow-hidden">
+        {linkedMd.length > 0 && (
+          <ul className="inset-list">
+            {linkedMd.map((r) => (
+              <li key={r.id}>
+                <button type="button" onClick={() => onEditMd(r)} className="flex w-full items-center gap-3 px-4 py-2.5 text-left active:bg-fill/15">
+                  <span className="w-[130px] shrink-0 text-[12.5px] text-label3">{mdTypeLabel(r.type)}</span>
+                  {r.cle ? (
+                    <span className="w-[110px] shrink-0 truncate font-mono text-[13.5px] font-semibold text-blue">{r.cle}</span>
+                  ) : (
+                    <span className="w-[110px] shrink-0 text-[13px] italic text-label3">to be defined</span>
+                  )}
+                  <span className="min-w-0 flex-1 truncate text-[14px]">{r.nom}</span>
+                  <span
+                    className={`shrink-0 rounded-full px-2 py-0.5 text-[12px] font-semibold ${
+                      r.etat === "cree" ? "bg-green/15 text-green" : "bg-gray/20 text-label3"
+                    }`}
+                  >
+                    {MD_ETAT_LABEL[r.etat]}
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+        <button type="button" onClick={onAddMd} className={`flex w-full items-center gap-2 px-4 py-2.5 text-left text-[14px] text-blue active:bg-fill/15 ${linkedMd.length ? "hairline-t" : ""}`}>
+          <Icon name="plus" className="h-4 w-4" /> Record created data
+        </button>
+      </div>
 
       {/* Captures */}
       <h2 className="section-title">Screenshots ({captures.length})</h2>

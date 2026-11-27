@@ -10,6 +10,24 @@ L'interface est en **anglais**. Chaque étape tient en **4 champs** : titre, T-c
 
 ## Fonctionnalités
 
+En haut de l'app, un segmented control passe d'une vue à l'autre : **Journal | Planning | Master data**. La vue active est dans l'URL (`?view=planning`, `?view=master-data`). Si le Journal a des modifications non enregistrées, l'alerte habituelle s'affiche avant de changer de vue.
+
+### Planning (le plan à suivre) · vide au départ
+- Carte d'en-tête : avancement global en %, barre de progression, « X done · Y in progress · Z to do, out of N tasks », filtres responsable et statut, **Go to next task** (fait défiler jusqu'à la première tâche non terminée et la surligne), **+ New phase**.
+- Une carte par phase, triée par nom (« 01 · … », « 02 · … ») : statut calculé (Done / In progress / To do), x/y et mini barre, renommer, supprimer (avec confirmation).
+- Chaque tâche : badge de type (Config gris, Check bleu, Flow test vert, Final test orange), titre et détail, statut en un clic (segmented control), responsable, **Edit** (titre, détail, type, phase, ordre, suppression). Une tâche Done est barrée.
+- En bas de chaque phase : « Add a task to this phase… » (Entrée) avec le type ; la tâche est ajoutée en dernier, au nom de l'utilisateur.
+- Flèches ↑ ↓ pour réordonner (sans filtre actif).
+- Une phase existe en base à travers ses tâches : une phase toute neuve, sans tâche, est gardée dans le navigateur de la personne qui l'a créée jusqu'à sa première tâche.
+
+### Master data (registre de ce qu'on crée ou copie dans SAP)
+- Carte d'en-tête : **+ Add master data**, recherche, filtre All / Created / Planned, **Copy as text**, chips par type avec compteur (seulement les types qui ont des données).
+- Une carte par type, dans l'ordre de la liste des types, avec un tableau : Key (vide = « to be defined »), Name / description (+ note), Copied from, Linked to, T-code, Created by, Status, Edit. Tri : créées d'abord, puis par clé.
+- Fenêtre Ajouter / Modifier : **doublon refusé** (« Plant 2BRE already exists », même clé non vide pour le même type, insensible à la casse ; aussi garanti en base par un index unique partiel), **Mark as created** sur une donnée prévue (demande d'abord la clé ; « Created by » devient l'utilisateur), suppression avec confirmation.
+- Lien avec le Journal : chaque fiche affiche ses master data liées et propose **Record created data** (pré-rempli avec le T-code de la fiche et l'utilisateur) ; depuis le registre, un clic sur « Journal: … » ouvre la fiche.
+
+### Journal
+
 - **Accès direct, sans e-mail ni mot de passe** : on ouvre le site et on choisit son nom (« Qui es-tu ? »). Chaque navigateur reçoit une session anonyme Supabase, gardée ensuite ; le nom se change avec « Changer ».
 - **Un espace par personne** + « Tout le journal », dans un segmented control collé en haut.
 - Liste des étapes avec la progression « x/y done », la recherche plein texte et un filtre par statut.
@@ -38,14 +56,17 @@ L'interface est en **anglais**. Chaque étape tient en **4 champs** : titre, T-c
 │   ├── StepList.tsx, StepDetail.tsx, StepForm.tsx
 │   ├── NewFromCaptureButton.tsx, AddCapturesZone.tsx, Lightbox.tsx, CaptureImage.tsx
 │   ├── PersonTabs.tsx, WhoAreYouSheet.tsx, HelpBanner.tsx, ExportSheet.tsx
+│   ├── planning/                    PlanningView, PhaseCard, TaskRow, TaskModal, PhaseNameModal
+│   ├── masterdata/                  MasterDataView, MdTable, MdModal
 │   └── ui/                          SegmentedControl, BottomSheet, Alert, Toast, Badges/Icônes
-├── hooks/                           useSession, useMembers, useJournal (Realtime), useSignedUrl, useImageDrop
+├── hooks/                           useSession, useMembers, useJournal, usePlanTasks, useMasterData (Realtime), useSignedUrl, useImageDrop
 ├── lib/
 │   ├── types.ts                     Types partagés
 │   ├── tcodes.ts                    Dictionnaire T-code → [chemin, titre]
 │   ├── blocs.ts, numbering.ts       Blocs proposés, numérotation automatique
 │   ├── storage.ts, images.ts        Upload, URLs signées, compression des captures
 │   ├── exportDocx.ts, exportZip.ts, exportText.ts
+│   ├── planning.ts, masterData.ts   Types, libellés, tri, doublons
 │   ├── businessCase.ts              Structure organisationnelle Philo Televisions
 │   ├── teamSummary.ts               Assemblage : avancement par bloc, par membre, pièces manquantes
 │   └── supabase/                    Clients navigateur et serveur
@@ -53,6 +74,8 @@ L'interface est en **anglais**. Chaque étape tient en **4 champs** : titre, T-c
 └── supabase/
     ├── migrations/0001_init.sql     Tables, RLS, bucket « captures », Realtime
     ├── migrations/0002_blocks.sql   Blocs créés par l'équipe (numérotation automatique)
+    ├── migrations/0003_planning_master_data.sql  Tables plan_tasks et master_data, RLS, Realtime, index unique partiel
+    ├── seed_master_data.sql         Registre Master data pré-rempli (40 objets) ; aucun seed pour le planning
     └── seed.sql                     Étapes 1.1 à 1.7 (facultatif)
 ```
 
@@ -67,7 +90,7 @@ npm i
 ### 2. Projet Supabase
 
 1. Crée un projet sur [supabase.com](https://supabase.com).
-2. Dans **SQL Editor**, exécute `supabase/migrations/0001_init.sql` puis `0002_blocks.sql`. Ce script crée :
+2. Dans **SQL Editor**, exécute dans l'ordre `supabase/migrations/0001_init.sql`, `0002_blocks.sql` et `0003_planning_master_data.sql`, puis `supabase/seed_master_data.sql` (une seule fois). Ce script crée :
    - les tables `members`, `steps` et `captures` ;
    - les policies RLS : tout membre connecté peut tout lire et tout modifier ;
    - le bucket **privé** `captures` et ses policies ;

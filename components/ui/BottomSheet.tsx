@@ -9,12 +9,15 @@ export function BottomSheet({
   onClose,
   children,
   dismissible = true,
+  wide = false,
 }: {
   open: boolean;
   title: string;
   onClose?: () => void;
   children: ReactNode;
   dismissible?: boolean;
+  /** Formulaire plus large (Planning, Master data). */
+  wide?: boolean;
 }) {
   const ref = useRef<HTMLDivElement>(null);
 
@@ -50,7 +53,7 @@ export function BottomSheet({
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className="anim-pop relative w-full max-w-[480px] rounded-[16px] bg-bg pb-5 pt-2 shadow-pop"
+        className={`anim-pop relative max-h-[90vh] w-full overflow-y-auto rounded-[16px] bg-bg pb-5 pt-2 shadow-pop ${wide ? "max-w-[640px]" : "max-w-[480px]"}`}
       >
         {children}
       </div>

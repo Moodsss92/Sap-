@@ -18,12 +18,29 @@ import { StepDetail } from "./StepDetail";
 import { StepForm, type FormInit, type StepFormHandle } from "./StepForm";
 import { StepList, type ListFilters } from "./StepList";
 import { WhoAreYouSheet } from "./WhoAreYouSheet";
+import { MasterDataView } from "./masterdata/MasterDataView";
+import { MdModal, type MdModalState } from "./masterdata/MdModal";
+import { PlanningView } from "./planning/PlanningView";
+import { SegmentedControl } from "./ui/SegmentedControl";
+import { useMasterData } from "@/hooks/useMasterData";
+import { mdTypeLabel, type MasterData, type MasterDataFields } from "@/lib/masterData";
 import { BlockNameSheet } from "./BlockNameSheet";
 import { Alert, type AlertOptions } from "./ui/Alert";
 import { Icon } from "./ui/Badges";
 import { useToast } from "./ui/Toast";
 
 type Progress = { done: number; total: number } | null;
+
+type View = "journal" | "planning" | "master-data";
+const VIEWS: { value: View; label: string }[] = [
+  { value: "journal", label: "Journal" },
+  { value: "planning", label: "Planning" },
+  { value: "master-data", label: "Master data" },
+];
+function viewFromUrl(): View {
+  const v = new URLSearchParams(window.location.search).get("view");
+  return v === "planning" || v === "master-data" ? v : "journal";
+}
 
 function matchesQuery(s: Step, q: string): boolean {
   if (!q) return true;
@@ -47,6 +64,17 @@ export function JournalApp() {
   const { user, loading: sessionLoading, error: sessionError } = useSession();
   const { me, loaded: membersLoaded, chooseName, nameOf } = useMembers(user?.id);
   const journal = useJournal(!!me);
+  const md = useMasterData(!!me);
+
+  // ---------- Vue active : Journal | Planning | Master data (reflétée dans l'URL ?view=) ----------
+  const [view, setViewState] = useState<View>("journal");
+  useEffect(() => {
+    const read = () => setViewState(viewFromUrl());
+    read();
+    window.addEventListener("popstate", read);
+    return () => window.removeEventListener("popstate", read);
+  }, []);
+  const [mdModal, setMdModal] = useState<MdModalState | null>(null);
   const { steps, capturesByStep } = journal;
 
   // ---------- État de l'interface ----------
@@ -304,7 +332,7 @@ export function JournalApp() {
   // Collage Ctrl/Cmd+V : formulaire ouvert → captures du formulaire ;
   // zone « Ajouter d'autres captures » ciblée → fiche affichée ; sinon → nouvelle étape.
   useEffect(() => {
-    if (!me) return;
+    if (!me || view !== "journal") return;
     const onPaste = (e: ClipboardEvent) => {
       const files = imagesFromDataTransfer(e.clipboardData);
       if (!files.length) return;
@@ -321,11 +349,11 @@ export function JournalApp() {
     };
     window.addEventListener("paste", onPaste);
     return () => window.removeEventListener("paste", onPaste);
-  }, [me, form, selected, addToSelected, createFromFiles]);
+  }, [me, view, form, selected, addToSelected, createFromFiles]);
 
   // Flèches ↑↓ : étape précédente / suivante
   useEffect(() => {
-    if (form) return;
+    if (form || view !== "journal") return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== "ArrowUp" && e.key !== "ArrowDown") return;
       if (e.metaKey || e.ctrlKey || e.altKey) return;
@@ -339,7 +367,7 @@ export function JournalApp() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [form, visible, visibleIndex]);
+  }, [form, view, visible, visibleIndex]);
 
   // ---------- Actions de la fiche ----------
   const onSave = useCallback(
@@ -519,6 +547,53 @@ export function JournalApp() {
     }
   };
 
+  // ---------- Changement de vue ----------
+  const changeView = async (v: View) => {
+    if (v === view) return;
+    if (!(await leaveForm())) return; // alerte existante si le Journal a des modifications non enregistrées
+    setViewState(v);
+    const url = new URL(window.location.href);
+    if (v === "journal") url.searchParams.delete("view");
+    else url.searchParams.set("view", v);
+    window.history.pushState(null, "", url);
+    window.scrollTo(0, 0);
+  };
+
+  const openStep = async (id: string) => {
+    await changeView("journal");
+    setTab("all");
+    setSelectedId(id);
+  };
+
+  // ---------- Master data ----------
+  const saveMd = async (fields: MasterDataFields, id?: string) => {
+    try {
+      if (id) await md.updateMd(id, fields);
+      else await md.addMd(fields);
+      setMdModal(null);
+      toast(id ? "Master data saved" : `${mdTypeLabel(fields.type)} ${fields.cle || fields.nom} added`, "success");
+    } catch (e) {
+      toast(e instanceof Error ? e.message : "Could not save.", "error", 6000);
+    }
+  };
+
+  const deleteMd = async (row: MasterData) => {
+    const ok = await confirm({
+      title: `Delete ${mdTypeLabel(row.type)} ${row.cle || row.nom}?`,
+      message: "It will be removed from the register for the whole team.",
+      confirmLabel: "Delete",
+      destructive: true,
+    });
+    if (!ok) return;
+    setMdModal(null);
+    try {
+      await md.deleteMd(row.id);
+      toast("Master data deleted");
+    } catch (e) {
+      toast(e instanceof Error ? e.message : "Could not delete.", "error", 6000);
+    }
+  };
+
   // ---------- Rendu ----------
   if (sessionLoading || (user && !membersLoaded)) {
     return (
@@ -574,7 +649,7 @@ export function JournalApp() {
       <header ref={headerRef} className="glass hairline-b sticky top-0 z-30 pt-[env(safe-area-inset-top)]">
         <div className="mx-auto max-w-[1600px] px-6">
           <div className="flex min-h-[52px] items-center gap-x-3 py-1.5">
-            <div className="mr-auto flex min-w-0 flex-1 items-center gap-2">
+            <div className="flex min-w-0 flex-1 items-center gap-2">
               <h1 className="truncate text-[20px] font-bold tracking-tight">SAP Log</h1>
               <span
                 className={`h-2 w-2 shrink-0 rounded-full ${journal.live ? "bg-green" : "bg-label3"}`}
@@ -582,7 +657,13 @@ export function JournalApp() {
                 aria-label={journal.live ? "Synced in real time" : "Connecting to real time"}
               />
             </div>
-            <div className="flex shrink-0 items-center gap-0.5">
+            <div className="w-[380px] shrink-0">
+              <SegmentedControl label="View" value={view} onChange={changeView} segments={VIEWS} />
+            </div>
+            <div className="flex-1" />
+            <div className="flex shrink-0 items-center justify-end gap-0.5">
+              {view === "journal" && (
+                <>
                 <button type="button" onClick={() => setExportOpen(true)} disabled={!!exporting} aria-label="Export" className="btn-plain px-2 text-[15px]">
                   <Icon name="doc" className="h-[18px] w-[18px]" />
                   <span className={exporting ? "" : "hidden sm:inline"}>{exporting ?? "Export"}</span>
@@ -591,6 +672,8 @@ export function JournalApp() {
                 <Icon name="copy" className="h-[18px] w-[18px]" />
                 <span className="hidden sm:inline">Copy as text</span>
               </button>
+                </>
+              )}
               <span className="mx-1 hidden h-5 w-[0.5px] bg-sep sm:block" aria-hidden />
               <span className="hidden text-[15px] text-label3 sm:inline">{me.name}</span>
               <button type="button" onClick={() => setWhoOpen(true)} aria-label={`Change name (currently ${me.name})`} className="btn-plain px-2 text-[15px]">
@@ -598,6 +681,7 @@ export function JournalApp() {
               </button>
             </div>
           </div>
+          {view === "journal" && (
           <div className="pb-2.5">
             <PersonTabs
               value={tab}
@@ -609,9 +693,30 @@ export function JournalApp() {
               total={steps.length}
             />
           </div>
+          )}
         </div>
       </header>
 
+      {view === "planning" && (
+        <div className="px-6 pt-5">
+          <PlanningView me={me.name} confirm={confirm} />
+        </div>
+      )}
+      {view === "master-data" && (
+        <div className="px-6 pt-5">
+          <MasterDataView
+            rows={md.rows}
+            loading={md.loading}
+            error={md.error}
+            steps={steps}
+            onAdd={() => setMdModal({ defaults: { resp: me.name } })}
+            onEdit={(row) => setMdModal({ row })}
+            onOpenStep={openStep}
+          />
+        </div>
+      )}
+
+      {view === "journal" && (
       <main className="mx-auto grid max-w-[1600px] grid-cols-[minmax(400px,480px)_minmax(0,1fr)] gap-8 px-6 pt-5">
         <aside
           aria-label="Step list"
@@ -692,6 +797,11 @@ export function JournalApp() {
               uploadProgress={detailUpload}
               authorName={nameOf(selected.author_id)}
               updaterName={nameOf(selected.updated_by)}
+              linkedMd={md.rows.filter((r) => r.step_id === selected.id)}
+              onAddMd={() =>
+                setMdModal({ defaults: { tcode: selected.tcode, resp: me.name, step_id: selected.id, etat: "cree" } })
+              }
+              onEditMd={(row) => setMdModal({ row })}
             />
           ) : (
             <div className="flex min-h-[50vh] flex-col items-center justify-center px-6 text-center text-label3">
@@ -704,6 +814,17 @@ export function JournalApp() {
           )}
         </section>
       </main>
+      )}
+
+      <MdModal
+        state={mdModal}
+        rows={md.rows}
+        steps={steps}
+        me={me.name}
+        onSave={saveMd}
+        onDelete={deleteMd}
+        onClose={() => setMdModal(null)}
+      />
 
       <WhoAreYouSheet
         open={whoOpen}

@@ -15,7 +15,7 @@ export function useToast() {
   return useContext(Ctx);
 }
 
-/** Toasts en pilule floutée, en haut de l'écran. */
+/** Toasts en pilule floutée, en bas de l'écran (le haut porte la navigation). */
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<ToastItem[]>([]);
   const seq = useRef(0);
@@ -29,12 +29,12 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <Ctx.Provider value={show}>
       {children}
-      <div aria-live="polite" className="pointer-events-none fixed inset-x-0 top-0 z-[70]">
+      <div aria-live="polite" className="pointer-events-none fixed inset-x-0 bottom-0 z-[70]">
         {items.map((t, i) => (
           <div
             key={t.id}
             role="status"
-            style={{ top: `calc(max(env(safe-area-inset-top), 12px) + ${i * 54}px)` }}
+            style={{ bottom: `calc(max(env(safe-area-inset-bottom), 20px) + ${(items.length - 1 - i) * 54}px)` }}
             className="anim-toast glass absolute left-1/2 flex max-w-[92vw] -translate-x-1/2 items-center gap-2 rounded-full px-5 py-3 text-[15px] font-medium shadow-pop"
           >
             <span
